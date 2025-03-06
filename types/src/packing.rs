@@ -66,10 +66,12 @@ pub fn unpack(mut packed: Vec<Felt>, layout: Vec<Felt>) -> Result<Vec<Felt>, Pac
     let mut offset = 0;
     // Iterate over the layout.
     for size in layout {
-        let size: u8 = size.to_u8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-            r#type: type_name::<u8>(),
-            value: size,
-        })?;
+        let size: u8 = size
+            .to_u8()
+            .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                r#type: type_name::<u8>(),
+                value: size,
+            })?;
 
         let size: usize = size.into();
         let remaining_bits = 251 - offset;
@@ -106,10 +108,12 @@ pub fn parse_ty(data: &[Felt]) -> Result<Ty, ParseError> {
         ));
     }
 
-    let member_type: u8 = data[0].to_u8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-        r#type: type_name::<u8>(),
-        value: data[0],
-    })?;
+    let member_type: u8 = data[0]
+        .to_u8()
+        .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+            r#type: type_name::<u8>(),
+            value: data[0],
+        })?;
 
     match member_type {
         0 => parse_simple(&data[1..]),
@@ -152,17 +156,23 @@ fn parse_struct(data: &[Felt]) -> Result<Ty, ParseError> {
 
     let name = parse_cairo_short_string(&data[0])?;
 
-    let attrs_len: u32 = data[1].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-        r#type: type_name::<u32>(),
-        value: data[1],
-    })?;
+    let attrs_len: u32 = data[1]
+        .to_u32()
+        .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+            r#type: type_name::<u32>(),
+            value: data[1],
+        })?;
     let attrs_slice_start = 2;
     let attrs_slice_end = attrs_slice_start + attrs_len as usize;
     let _attrs = &data[attrs_slice_start..attrs_slice_end];
 
-    let children_len: u32 = data[attrs_slice_end].to_u32().ok_or_else(|| {
-        PrimitiveError::ValueOutOfRange { r#type: type_name::<u32>(), value: data[attrs_slice_end] }
-    })?;
+    let children_len: u32 =
+        data[attrs_slice_end]
+            .to_u32()
+            .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                r#type: type_name::<u32>(),
+                value: data[attrs_slice_end],
+            })?;
 
     let children_len = children_len as usize;
 
@@ -171,10 +181,12 @@ fn parse_struct(data: &[Felt]) -> Result<Ty, ParseError> {
 
     for i in 0..children_len {
         let start = i + offset;
-        let len: u32 = data[start].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-            r#type: type_name::<u32>(),
-            value: data[start],
-        })?;
+        let len: u32 = data[start]
+            .to_u32()
+            .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                r#type: type_name::<u32>(),
+                value: data[start],
+            })?;
         let slice_start = start + 1;
         let slice_end = slice_start + len as usize;
         children.push(parse_member(&data[slice_start..slice_end])?);
@@ -195,10 +207,12 @@ fn parse_member(data: &[Felt]) -> Result<schema::Member, ParseError> {
 
     let name = parse_cairo_short_string(&data[0])?;
 
-    let attributes_len: u32 = data[1].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-        r#type: type_name::<u32>(),
-        value: data[1],
-    })?;
+    let attributes_len: u32 = data[1]
+        .to_u32()
+        .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+            r#type: type_name::<u32>(),
+            value: data[1],
+        })?;
     let slice_start = 2;
     let slice_end = slice_start + attributes_len as usize;
     let attributes = &data[slice_start..slice_end];
@@ -220,17 +234,23 @@ fn parse_enum(data: &[Felt]) -> Result<Ty, ParseError> {
 
     let name = parse_cairo_short_string(&data[0])?;
 
-    let attrs_len: u32 = data[1].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-        r#type: type_name::<u32>(),
-        value: data[1],
-    })?;
+    let attrs_len: u32 = data[1]
+        .to_u32()
+        .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+            r#type: type_name::<u32>(),
+            value: data[1],
+        })?;
     let attrs_slice_start = 2;
     let attrs_slice_end = attrs_slice_start + attrs_len as usize;
     let _attrs = &data[attrs_slice_start..attrs_slice_end];
 
-    let values_len: u32 = data[attrs_slice_end].to_u32().ok_or_else(|| {
-        PrimitiveError::ValueOutOfRange { r#type: type_name::<u32>(), value: data[attrs_slice_end] }
-    })?;
+    let values_len: u32 =
+        data[attrs_slice_end]
+            .to_u32()
+            .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                r#type: type_name::<u32>(),
+                value: data[attrs_slice_end],
+            })?;
     let values_len = values_len as usize;
 
     let mut values = vec![];
@@ -240,18 +260,27 @@ fn parse_enum(data: &[Felt]) -> Result<Ty, ParseError> {
         let start = i + offset;
         let name = parse_cairo_short_string(&data[start])?;
         let slice_start = start + 2;
-        let len: u32 = data[start + 3].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-            r#type: type_name::<u32>(),
-            value: data[start + 3],
-        })?;
+        let len: u32 = data[start + 3]
+            .to_u32()
+            .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                r#type: type_name::<u32>(),
+                value: data[start + 3],
+            })?;
         let len = len + 1; // Account for Ty enum index
 
         let slice_end = slice_start + len as usize;
-        values.push(EnumOption { name, ty: parse_ty(&data[slice_start..slice_end])? });
+        values.push(EnumOption {
+            name,
+            ty: parse_ty(&data[slice_start..slice_end])?,
+        });
         offset += len as usize + 2;
     }
 
-    Ok(Ty::Enum(schema::Enum { name, option: None, options: values }))
+    Ok(Ty::Enum(schema::Enum {
+        name,
+        option: None,
+        options: values,
+    }))
 }
 
 fn parse_tuple(data: &[Felt]) -> Result<Ty, ParseError> {
@@ -260,10 +289,12 @@ fn parse_tuple(data: &[Felt]) -> Result<Ty, ParseError> {
         return Ok(Ty::Tuple(vec![]));
     }
 
-    let children_len: u32 = data[0].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-        r#type: type_name::<u32>(),
-        value: data[0],
-    })?;
+    let children_len: u32 = data[0]
+        .to_u32()
+        .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+            r#type: type_name::<u32>(),
+            value: data[0],
+        })?;
     let children_len = children_len as usize;
 
     let mut children = vec![];
@@ -271,10 +302,12 @@ fn parse_tuple(data: &[Felt]) -> Result<Ty, ParseError> {
 
     for i in 0..children_len {
         let start = i + offset;
-        let len: u32 = data[start].to_u32().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-            r#type: type_name::<u32>(),
-            value: data[start],
-        })?;
+        let len: u32 = data[start]
+            .to_u32()
+            .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                r#type: type_name::<u32>(),
+                value: data[start],
+            })?;
         let slice_start = start + 1;
         let slice_end = slice_start + len as usize;
         children.push(parse_ty(&data[slice_start..slice_end])?);
@@ -321,7 +354,10 @@ mod tests {
     #[test]
     fn parse_simple_with_valid_value() {
         let data = [cairo_short_string_to_felt("u8").unwrap()];
-        assert_eq!(parse_simple(&data).unwrap(), Ty::Primitive(Primitive::U8(None)));
+        assert_eq!(
+            parse_simple(&data).unwrap(),
+            Ty::Primitive(Primitive::U8(None))
+        );
     }
 
     #[test]
@@ -331,18 +367,27 @@ mod tests {
         assert!(parse_struct(&data).is_err());
 
         // Only with attr len.
-        let data = [cairo_short_string_to_felt("bad_struct").unwrap(), Felt::default()];
+        let data = [
+            cairo_short_string_to_felt("bad_struct").unwrap(),
+            Felt::default(),
+        ];
         assert!(parse_struct(&data).is_err());
     }
 
     #[test]
     fn parse_struct_empty() {
-        let data =
-            [cairo_short_string_to_felt("empty_struct").unwrap(), Felt::default(), Felt::default()];
+        let data = [
+            cairo_short_string_to_felt("empty_struct").unwrap(),
+            Felt::default(),
+            Felt::default(),
+        ];
 
         assert_eq!(
             parse_struct(&data).unwrap(),
-            Ty::Struct(schema::Struct { name: "empty_struct".to_string(), children: vec![] })
+            Ty::Struct(schema::Struct {
+                name: "empty_struct".to_string(),
+                children: vec![]
+            })
         );
     }
 

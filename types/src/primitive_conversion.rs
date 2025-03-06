@@ -41,7 +41,9 @@ macro_rules! impl_from_felt {
                 if bytes_le[size_of_type..].iter().all(|&v| v == 0)
                     && bytes_le[size_of_type - 1] <= 0b01111111
                 {
-                    Ok(<$into>::from_le_bytes(bytes_le[..size_of_type].try_into().unwrap()))
+                    Ok(<$into>::from_le_bytes(
+                        bytes_le[..size_of_type].try_into().unwrap(),
+                    ))
                 } else if bytes_le[size_of_type..] == MINUS_TWO_BYTES_REPR[size_of_type..]
                     && bytes_le[size_of_type - 1] >= 0b10000000
                 {

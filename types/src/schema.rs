@@ -193,16 +193,22 @@ impl Ty {
             }
             Ty::Enum(e) => {
                 let value = felts.remove(0);
-                e.option = Some(value.to_u8().ok_or_else(|| PrimitiveError::ValueOutOfRange {
-                    r#type: type_name::<u8>(),
-                    value,
-                })?);
+                e.option = Some(
+                    value
+                        .to_u8()
+                        .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                            r#type: type_name::<u8>(),
+                            value,
+                        })?,
+                );
 
                 match &e.options[e.option.unwrap() as usize].ty {
                     // Skip deserializing the enum option if it has no type - unit type
                     Ty::Tuple(tuple) if tuple.is_empty() => {}
                     _ => {
-                        e.options[e.option.unwrap() as usize].ty.deserialize(felts)?;
+                        e.options[e.option.unwrap() as usize]
+                            .ty
+                            .deserialize(felts)?;
                     }
                 }
             }
@@ -213,9 +219,13 @@ impl Ty {
             }
             Ty::Array(items_ty) => {
                 let value = felts.remove(0);
-                let arr_len: u32 = value.to_u32().ok_or_else(|| {
-                    PrimitiveError::ValueOutOfRange { r#type: type_name::<u32>(), value }
-                })?;
+                let arr_len: u32 =
+                    value
+                        .to_u32()
+                        .ok_or_else(|| PrimitiveError::ValueOutOfRange {
+                            r#type: type_name::<u32>(),
+                            value,
+                        })?;
 
                 let item_ty = items_ty.pop().unwrap();
                 for _ in 0..arr_len {
@@ -260,7 +270,10 @@ impl Ty {
                 if diff_children.is_empty() {
                     None
                 } else {
-                    Some(Ty::Struct(Struct { name: s1.name.clone(), children: diff_children }))
+                    Some(Ty::Struct(Struct {
+                        name: s1.name.clone(),
+                        children: diff_children,
+                    }))
                 }
             }
             (Ty::Enum(e1), Ty::Enum(e2)) => {
@@ -271,9 +284,10 @@ impl Ty {
                     .filter_map(|o1| {
                         if let Some(o2) = e2.options.iter().find(|o2| o2.name == o1.name) {
                             // Option exists in both - check if types are different
-                            o1.ty
-                                .diff(&o2.ty)
-                                .map(|diff_ty| EnumOption { name: o1.name.clone(), ty: diff_ty })
+                            o1.ty.diff(&o2.ty).map(|diff_ty| EnumOption {
+                                name: o1.name.clone(),
+                                ty: diff_ty,
+                            })
                         } else {
                             // Option doesn't exist in e2
                             Some(o1.clone())
@@ -295,15 +309,28 @@ impl Ty {
                 if t1.len() != t2.len() {
                     Some(Ty::Tuple(
                         t1.iter()
-                            .filter_map(|ty| if !t2.contains(ty) { Some(ty.clone()) } else { None })
+                            .filter_map(|ty| {
+                                if !t2.contains(ty) {
+                                    Some(ty.clone())
+                                } else {
+                                    None
+                                }
+                            })
                             .collect(),
                     ))
                 } else {
                     // Compare each tuple element recursively
-                    let diff_elements: Vec<Ty> =
-                        t1.iter().zip(t2.iter()).filter_map(|(ty1, ty2)| ty1.diff(ty2)).collect();
+                    let diff_elements: Vec<Ty> = t1
+                        .iter()
+                        .zip(t2.iter())
+                        .filter_map(|(ty1, ty2)| ty1.diff(ty2))
+                        .collect();
 
-                    if diff_elements.is_empty() { None } else { Some(Ty::Tuple(diff_elements)) }
+                    if diff_elements.is_empty() {
+                        None
+                    } else {
+                        Some(Ty::Tuple(diff_elements))
+                    }
                 }
             }
             (Ty::Array(a1), Ty::Array(a2)) => {
@@ -329,7 +356,11 @@ impl Ty {
             }
             // Different types entirely - we cannot diff them
             _ => {
-                panic!("Type mismatch between self {:?} and other {:?}", self.name(), other.name())
+                panic!(
+                    "Type mismatch between self {:?} and other {:?}",
+                    self.name(),
+                    other.name()
+                )
             }
         }
     }
@@ -364,7 +395,9 @@ impl Ty {
                 Ok(json!(obj))
             }
             Ty::Enum(e) => {
-                let option = e.option().map_err(|_| PrimitiveError::MissingFieldElement)?;
+                let option = e
+                    .option()
+                    .map_err(|_| PrimitiveError::MissingFieldElement)?;
                 Ok(json!({
                     option.name.clone(): option.ty.to_json_value()?
                 }))
@@ -475,7 +508,8 @@ impl Ty {
             }
             (Ty::Enum(e), JsonValue::Object(obj)) => {
                 if let Some((name, value)) = obj.into_iter().next() {
-                    e.set_option(&name).map_err(|_| PrimitiveError::TypeMismatch)?;
+                    e.set_option(&name)
+                        .map_err(|_| PrimitiveError::TypeMismatch)?;
                     if let Some(option) = e.option {
                         e.options[option as usize].ty.from_json_value(value)?;
                     }
@@ -555,9 +589,10 @@ impl std::fmt::Display for Ty {
                     enum_str.push('}');
                     Some(enum_str)
                 }
-                Ty::Tuple(tuple) => {
-                    Some(format!("tuple({})", tuple.iter().map(|ty| ty.name()).join(", ")))
-                }
+                Ty::Tuple(tuple) => Some(format!(
+                    "tuple({})",
+                    tuple.iter().map(|ty| ty.name()).join(", ")
+                )),
                 Ty::Array(items_ty) => Some(format!("Array<{}>", items_ty[0].name())),
                 Ty::ByteArray(_) => Some("ByteArray".to_string()),
                 _ => None,
@@ -578,7 +613,10 @@ pub struct Struct {
 impl Struct {
     /// Returns the struct member with the given name. Returns `None` if no such member exists.
     pub fn get(&self, field: &str) -> Option<&Ty> {
-        self.children.iter().find(|m| m.name == field).map(|m| &m.ty)
+        self.children
+            .iter()
+            .find(|m| m.name == field)
+            .map(|m| &m.ty)
     }
 
     pub fn keys(&self) -> Vec<Member> {
@@ -864,8 +902,14 @@ mod tests {
                         name: "TestEnum".to_string(),
                         option: Some(1),
                         options: vec![
-                            EnumOption { name: "OptionA".to_string(), ty: Ty::Tuple(vec![]) },
-                            EnumOption { name: "OptionB".to_string(), ty: Ty::Tuple(vec![]) },
+                            EnumOption {
+                                name: "OptionA".to_string(),
+                                ty: Ty::Tuple(vec![]),
+                            },
+                            EnumOption {
+                                name: "OptionB".to_string(),
+                                ty: Ty::Tuple(vec![]),
+                            },
                         ],
                     }),
                     key: false,
@@ -927,15 +971,24 @@ mod tests {
             name: "TestEnum".to_string(),
             option: None,
             options: vec![
-                EnumOption { name: "Option1".to_string(), ty: Ty::Tuple(vec![]) },
-                EnumOption { name: "Option2".to_string(), ty: Ty::Tuple(vec![]) },
+                EnumOption {
+                    name: "Option1".to_string(),
+                    ty: Ty::Tuple(vec![]),
+                },
+                EnumOption {
+                    name: "Option2".to_string(),
+                    ty: Ty::Tuple(vec![]),
+                },
             ],
         });
 
         let enum2 = Ty::Enum(Enum {
             name: "TestEnum".to_string(),
             option: None,
-            options: vec![EnumOption { name: "Option1".to_string(), ty: Ty::Tuple(vec![]) }],
+            options: vec![EnumOption {
+                name: "Option1".to_string(),
+                ty: Ty::Tuple(vec![]),
+            }],
         });
 
         // Should show only Option2 as difference
