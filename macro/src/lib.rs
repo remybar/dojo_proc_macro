@@ -11,3 +11,5 @@ extern crate smol_str;
 mod attributes;
 mod inlines;
 mod derives;
+mod diagnostic_ext;
+mod proc_macro_result_ext;
