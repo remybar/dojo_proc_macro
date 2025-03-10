@@ -813,6 +813,7 @@ dependencies = [
 name = "dojo_macros"
 version = "1.2.2"
 dependencies = [
+ "anyhow",
  "cainome",
  "cainome-cairo-serde",
  "cairo-lang-defs",
@@ -824,6 +825,7 @@ dependencies = [
  "cairo-lang-utils",
  "dojo-types",
  "smol_str",
+ "starknet",
  "starknet-crypto",
 ]
 

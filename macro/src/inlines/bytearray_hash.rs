@@ -2,9 +2,7 @@ use cairo_lang_syntax::node::{
     ast, db::SyntaxGroup, kind::SyntaxKind::ExprParenthesized, Terminal, TypedSyntaxNode,
 };
 
-use cairo_lang_macro::{
-    inline_macro, quote, ProcMacroResult, TextSpan, Token, TokenStream, TokenTree,
-};
+use cairo_lang_macro::{quote, ProcMacroResult, TextSpan, Token, TokenStream, TokenTree};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use smol_str::ToSmolStr;
 
@@ -12,12 +10,7 @@ use dojo_types::naming;
 
 use crate::utils::ProcMacroResultExt;
 
-#[inline_macro]
-pub fn bytearray_hash(token_stream: TokenStream) -> ProcMacroResult {
-    process_bytearray_hash(token_stream)
-}
-
-fn process_bytearray_hash(token_stream: TokenStream) -> ProcMacroResult {
+pub(crate) fn process(token_stream: TokenStream) -> ProcMacroResult {
     let db = SimpleParserDatabase::default();
     let (root_node, _diagnostics) = db.parse_token_stream_expr(&token_stream);
 
@@ -58,7 +51,7 @@ mod tests {
     fn test_with_bad_inputs() {
         // input without parenthesis
         let input = "hello";
-        let res = process_bytearray_hash(TokenStream::new(vec![TokenTree::Ident(Token::new(
+        let res = process(TokenStream::new(vec![TokenTree::Ident(Token::new(
             input,
             TextSpan::call_site(),
         ))]));
@@ -73,7 +66,7 @@ mod tests {
 
         // bad input type
         let input = "(1234)";
-        let res = process_bytearray_hash(TokenStream::new(vec![TokenTree::Ident(Token::new(
+        let res = process(TokenStream::new(vec![TokenTree::Ident(Token::new(
             input,
             TextSpan::call_site(),
         ))]));
@@ -92,7 +85,7 @@ mod tests {
         let input = "(\"hello\")";
         let expected = "0x3244ef30a5e431f958f5ee38a0726e8b1997bb7654b164218ac4a01fb9e2646";
 
-        let res = process_bytearray_hash(TokenStream::new(vec![TokenTree::Ident(Token::new(
+        let res = process(TokenStream::new(vec![TokenTree::Ident(Token::new(
             input,
             TextSpan::call_site(),
         ))]));
