@@ -1,59 +1,54 @@
-use anyhow;
-use cairo_lang_macro::ProcMacroResult;
+use cairo_lang_macro::{Diagnostic, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::ast::{ItemEnum, OptionTypeClause, Variant};
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::Terminal;
 
 use crate::derives::helpers;
-use crate::utils::ProcMacroResultExt;
+use crate::utils::DiagnosticsExt;
 
 /// TODO RBA
 pub fn process_enum_introspect(
     db: &SimpleParserDatabase,
+    diagnostics: &mut Vec<Diagnostic>,
     enum_ast: &ItemEnum,
     is_packed: bool,
-) -> ProcMacroResult {
+) -> TokenStream {
     let derive_attrs = enum_ast.attributes(db).query_attr(db, "derive");
 
-    if let Err(msg) = helpers::check_derive_attrs_conflicts(db, derive_attrs) {
-        return ProcMacroResult::fail(msg.to_string());
-    }
+    helpers::check_derive_attrs_conflicts(db, diagnostics, derive_attrs);
 
-    generate_enum_introspect(db, enum_ast, is_packed)
+    generate_enum_introspect(db, diagnostics, enum_ast, is_packed)
 }
 
 /// Generate the introspect of a Enum
 pub fn generate_enum_introspect(
     db: &SimpleParserDatabase,
+    diagnostics: &mut Vec<Diagnostic>,
     enum_ast: &ItemEnum,
     is_packed: bool,
-) -> ProcMacroResult {
+) -> TokenStream {
     let enum_name = enum_ast.name(db).text(db).into();
     let variant_sizes = compute_enum_variant_sizes(db, enum_ast);
 
     let layout = if is_packed {
         if is_enum_packable(&variant_sizes) {
-            match build_packed_enum_layout(db, enum_ast) {
-                Ok(l) => l,
-                Err(e) => return ProcMacroResult::fail(e.to_string()),
-            }
+            build_packed_enum_layout(db, diagnostics, enum_ast)
         } else {
-            return ProcMacroResult::fail(
+            diagnostics.push_error(
                 "To be packed, all variants must have fixed layout of same size.".to_string(),
             );
+            "".to_string()
         }
     } else {
-        match build_variant_layouts(db, enum_ast) {
-            Ok(l) => format!(
-                "dojo::meta::Layout::Enum(
+        format!(
+            "dojo::meta::Layout::Enum(
                 array![
-                {l}
+                {}
                 ].span()
-            )"
-            ),
-            Err(e) => return ProcMacroResult::fail(e.to_string()),
-        }
+            )",
+            build_variant_layouts(db, diagnostics, enum_ast)
+        )
     };
 
     let (gen_types, gen_impls) =
@@ -61,9 +56,7 @@ pub fn generate_enum_introspect(
     let enum_size = compute_enum_layout_size(&variant_sizes, is_packed);
     let ty = build_enum_ty(db, &enum_name, enum_ast);
 
-    super::generate_introspect(
-        &enum_name, &enum_size, &gen_types, gen_impls, &layout, &ty,
-    )
+    super::generate_introspect(&enum_name, &enum_size, &gen_types, gen_impls, &layout, &ty)
 }
 
 pub fn compute_enum_variant_sizes(
@@ -132,8 +125,9 @@ pub fn compute_enum_layout_size(
 //
 pub fn build_packed_enum_layout(
     db: &SimpleParserDatabase,
+    diagnostics: &mut Vec<Diagnostic>,
     enum_ast: &ItemEnum,
-) -> anyhow::Result<String> {
+) -> String {
     // to be packable, all variants data must have the same size.
     // as this point has already been checked before calling `build_packed_enum_layout`,
     // just use the first variant to generate the fixed layout.
@@ -144,7 +138,11 @@ pub fn build_packed_enum_layout(
         match elements.first().unwrap().type_clause(db) {
             OptionTypeClause::Empty(_) => vec![],
             OptionTypeClause::TypeClause(type_clause) => {
-                super::layout::get_packed_field_layout_from_type_clause(db, &type_clause)?
+                super::layout::get_packed_field_layout_from_type_clause(
+                    db,
+                    diagnostics,
+                    &type_clause,
+                )
             }
         }
     };
@@ -152,7 +150,7 @@ pub fn build_packed_enum_layout(
     // don't forget the store the variant value
     variant_layout.insert(0, "8".to_string());
 
-    let res = if variant_layout
+    if variant_layout
         .iter()
         .any(|v| super::layout::is_custom_layout(v.as_str()))
     {
@@ -166,17 +164,16 @@ pub fn build_packed_enum_layout(
             )",
             variant_layout.join(",")
         )
-    };
-
-    Ok(res)
+    }
 }
 
 /// build the full layout for every variant in the Enum.
 /// Note that every variant may have a different associated data type.
 pub fn build_variant_layouts(
     db: &SimpleParserDatabase,
+    diagnostics: &mut Vec<Diagnostic>,
     enum_ast: &ItemEnum,
-) -> anyhow::Result<String> {
+) -> String {
     let mut layouts = vec![];
 
     for (i, v) in enum_ast.variants(db).elements(db).iter().enumerate() {
@@ -185,7 +182,7 @@ pub fn build_variant_layouts(
         let variant_layout = match v.type_clause(db) {
             OptionTypeClause::Empty(_) => "dojo::meta::Layout::Fixed(array![].span())".to_string(),
             OptionTypeClause::TypeClause(type_clause) => {
-                super::layout::get_layout_from_type_clause(db, &type_clause)?
+                super::layout::get_layout_from_type_clause(db, diagnostics, &type_clause)
             }
         };
 
@@ -197,7 +194,7 @@ pub fn build_variant_layouts(
         ));
     }
 
-    Ok(layouts.join(",\n"))
+    layouts.join(",\n")
 }
 
 pub fn build_enum_ty(db: &SimpleParserDatabase, name: &String, enum_ast: &ItemEnum) -> String {

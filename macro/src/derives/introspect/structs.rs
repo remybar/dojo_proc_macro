@@ -1,5 +1,5 @@
-use anyhow;
-use cairo_lang_macro::ProcMacroResult;
+use cairo_lang_macro::Diagnostic;
+use cairo_lang_macro::TokenStream;
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::ast::ItemStruct;
 use cairo_lang_syntax::node::ast::Member;
@@ -9,49 +9,44 @@ use starknet::core::utils::get_selector_from_name;
 
 use crate::constants::CAIRO_DELIMITERS;
 use crate::derives::helpers;
-use crate::utils::ProcMacroResultExt;
+use crate::utils::DiagnosticsExt;
 
 /// TODO RBA
 pub fn process_struct_introspect(
     db: &SimpleParserDatabase,
+    diagnostics: &mut Vec<Diagnostic>,
     struct_ast: &ItemStruct,
     is_packed: bool,
-) -> ProcMacroResult {
+) -> TokenStream {
     let derive_attrs = struct_ast.attributes(db).query_attr(db, "derive");
 
-    if let Err(msg) = helpers::check_derive_attrs_conflicts(db, derive_attrs) {
-        return ProcMacroResult::fail(msg.to_string());
-    }
+    helpers::check_derive_attrs_conflicts(db, diagnostics, derive_attrs);
 
-    generate_struct_introspect(db, struct_ast, is_packed)
+    generate_struct_introspect(db, diagnostics, struct_ast, is_packed)
 }
 
 /// TODO RBA
 fn generate_struct_introspect(
     db: &SimpleParserDatabase,
+    diagnostics: &mut Vec<Diagnostic>,
     struct_ast: &ItemStruct,
     is_packed: bool,
-) -> ProcMacroResult {
+) -> TokenStream {
     let struct_name = struct_ast.name(db).text(db).into();
     let struct_size = compute_struct_layout_size(db, struct_ast, is_packed);
     let ty = build_struct_ty(db, &struct_name, struct_ast);
 
     let layout = if is_packed {
-        match build_packed_struct_layout(db, struct_ast) {
-            Ok(l) => l,
-            Err(e) => return ProcMacroResult::fail(e.to_string()),
-        }
+        build_packed_struct_layout(db, diagnostics, struct_ast)
     } else {
-        match build_struct_field_layouts(db, struct_ast) {
-            Ok(layout) => format!(
-                "dojo::meta::Layout::Struct(
-                    array![
-                    {layout}
-                    ].span()
-                )"
-            ),
-            Err(e) => return ProcMacroResult::fail(e.to_string()),
-        }
+        format!(
+            "dojo::meta::Layout::Struct(
+                array![
+                {}
+                ].span()
+            )",
+            build_struct_field_layouts(db, diagnostics, struct_ast)
+        )
     };
 
     let (gen_types, gen_impls) =
@@ -141,8 +136,9 @@ fn build_struct_ty(db: &SimpleParserDatabase, name: &String, struct_ast: &ItemSt
 /// build the full layout for every field in the Struct.
 pub fn build_struct_field_layouts(
     db: &SimpleParserDatabase,
+    diagnostics: &mut Vec<Diagnostic>,
     struct_ast: &ItemStruct,
-) -> anyhow::Result<String> {
+) -> String {
     let mut members = vec![];
 
     for member in struct_ast.members(db).elements(db).iter() {
@@ -152,17 +148,20 @@ pub fn build_struct_field_layouts(
             // Check if the member type uses the `usize` type, either
             // directly or as a nested type (the tuple (u8, usize, u32) for example)
             if type_contains_usize(member_type) {
-                anyhow::bail!(
+                diagnostics.push_error(
                     "Use u32 rather than usize for model keys, as usize size is \
                                 architecture dependent."
-                        .to_string()
+                        .to_string(),
                 );
             }
 
             let field_name = member.name(db).text(db);
             let field_selector = get_selector_from_name(field_name.as_ref()).unwrap();
-            let field_layout =
-                super::layout::get_layout_from_type_clause(db, &member.type_clause(db))?;
+            let field_layout = super::layout::get_layout_from_type_clause(
+                db,
+                diagnostics,
+                &member.type_clause(db),
+            );
 
             members.push(format!(
                 "dojo::meta::FieldLayout {{
@@ -173,13 +172,14 @@ pub fn build_struct_field_layouts(
         }
     }
 
-    Ok(members.join(",\n"))
+    members.join(",\n")
 }
 
 fn build_packed_struct_layout(
     db: &SimpleParserDatabase,
+    diagnostics: &mut Vec<Diagnostic>,
     struct_ast: &ItemStruct,
-) -> anyhow::Result<String> {
+) -> String {
     let mut layouts = vec![];
 
     for member in struct_ast
@@ -188,14 +188,17 @@ fn build_packed_struct_layout(
         .iter()
         .filter(|m| !m.has_attr(db, "key"))
     {
-        let layout =
-            super::layout::get_packed_field_layout_from_type_clause(db, &member.type_clause(db))?;
+        let layout = super::layout::get_packed_field_layout_from_type_clause(
+            db,
+            diagnostics,
+            &member.type_clause(db),
+        );
         layouts.push(layout)
     }
 
     let layouts = layouts.into_iter().flatten().collect::<Vec<_>>();
 
-    let res = if layouts
+    if layouts
         .iter()
         .any(|v| super::layout::is_custom_layout(v.as_str()))
     {
@@ -209,9 +212,7 @@ fn build_packed_struct_layout(
         )",
             layouts.join(",")
         )
-    };
-
-    Ok(res)
+    }
 }
 
 fn type_contains_usize(type_str: String) -> bool {

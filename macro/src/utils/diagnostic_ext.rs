@@ -1,13 +1,24 @@
-use cairo_lang_macro::{Diagnostic, Diagnostics, Severity};
+use cairo_lang_macro::{Diagnostic, Severity};
 
 pub trait DiagnosticsExt {
     fn with_error(message: String) -> Self;
+    fn push_error(&mut self, message: String);
+    //TODO RBA: fn push_warn(&mut self, message: String);
 }
 
-impl DiagnosticsExt for Diagnostics {
+impl DiagnosticsExt for Vec<Diagnostic> {
     fn with_error(message: String) -> Self {
-        Self::new(vec![Diagnostic::error(message)])
+        vec![Diagnostic::error(message)]
     }
+    fn push_error(&mut self, message: String) {
+        self.push(Diagnostic::error(message));
+    }
+
+    /* TODO RBA
+    fn push_warn(&mut self, message: String) {
+        self.push(Diagnostic::warn(message));
+    }
+    */
 }
 
 pub trait DiagnosticExt {

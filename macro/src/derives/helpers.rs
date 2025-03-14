@@ -1,4 +1,4 @@
-use anyhow;
+use cairo_lang_macro::Diagnostic;
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::attribute::structured::AttributeArgVariant;
 use cairo_lang_syntax::attribute::structured::AttributeStructurize;
@@ -7,6 +7,7 @@ use cairo_lang_syntax::node::ast::Attribute;
 use cairo_lang_syntax::node::Terminal;
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
+use crate::utils::DiagnosticsExt;
 
 /// Extracts the names of the derive attributes from the given attributes.
 ///
@@ -48,19 +49,16 @@ pub fn extract_derive_attr_names(db: &SimpleParserDatabase, attrs: Vec<Attribute
 /// TODO RBA
 pub fn check_derive_attrs_conflicts(
     db: &SimpleParserDatabase,
+    diagnostics: &mut Vec<Diagnostic>,
     attrs: Vec<Attribute>,
-) -> anyhow::Result<()> {
+) {
     let attr_names = extract_derive_attr_names(db, attrs);
 
     if attr_names.contains(&DOJO_INTROSPECT_DERIVE.to_string())
         && attr_names.contains(&DOJO_PACKED_DERIVE.to_string())
     {
-        anyhow::bail!(
-            "{} and {} attributes cannot be used at a same time.",
-            DOJO_INTROSPECT_DERIVE,
-            DOJO_PACKED_DERIVE
-        )
-    } else {
-        Ok(())
+        diagnostics.push_error(
+            format!("{DOJO_INTROSPECT_DERIVE} and {DOJO_PACKED_DERIVE} attributes cannot be used at a same time.")
+        );
     }
 }

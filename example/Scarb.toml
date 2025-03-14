@@ -3,7 +3,7 @@ name = "dojo_example"
 version = "0.1.0"
 edition = "2024_07"
 
-# See more keys and their definitions at https://docs.swmansion.com/scarb/docs/reference/manifest.html
-
 [dependencies]
 dojo_macros = { path = "../macro" }
+dojo = { path = "../dojo" }
+starknet = "2.10.1"

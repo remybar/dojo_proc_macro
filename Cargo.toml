@@ -17,7 +17,7 @@ version = "1.2.2"
 dojo-types = { path = "types" }
 
 cairo-lang-primitive-token = "1"
-cairo-lang-macro = { git = "https://github.com/software-mansion/scarb.git", rev = "e43e07b553738b5f68bc7eca845c219f4203cce2" }
+cairo-lang-macro = { git = "https://github.com/software-mansion/scarb.git", rev = "3433263ad8462aec7304d18b1375235ed99da7b9" }
 
 cairo-lang-parser = { git = "https://github.com/starkware-libs/cairo.git", rev = "c539d077479654eee6323d9c0c6eafad82d4851a" }
 cairo-lang-utils = { git = "https://github.com/starkware-libs/cairo.git", rev = "c539d077479654eee6323d9c0c6eafad82d4851a" }
