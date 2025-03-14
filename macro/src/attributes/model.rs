@@ -7,12 +7,11 @@ use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 use dojo_types::naming;
 
 use super::helpers::{self, Member};
-use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE};
+use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use crate::derives;
 use crate::utils::tokenize;
 use crate::utils::{proc_macro_result_ext::ProcMacroResultExt, DiagnosticsExt};
 
-const EXPECTED_DERIVE_ATTR_NAMES: [&str; 2] = ["Serde", "Drop"];
 
 pub(crate) fn process(db: &SimpleParserDatabase, original_struct: TokenStream, struct_ast: &ast::ItemStruct) -> ProcMacroResult {
     let mut diagnostics = vec![];
@@ -106,6 +105,7 @@ pub(crate) fn process(db: &SimpleParserDatabase, original_struct: TokenStream, s
 
     let derive_attr_names = derives::helpers::extract_derive_attr_names(
         db,
+        &mut diagnostics,
         struct_ast.attributes(db).query_attr(db, "derive"),
     );
 

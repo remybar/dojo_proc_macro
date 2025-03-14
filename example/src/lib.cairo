@@ -1,5 +1,6 @@
 //mod introspect;
-mod model;
+//mod model;
+mod event;
 
 fn main() {
     let hash = bytearray_hash!("hello");

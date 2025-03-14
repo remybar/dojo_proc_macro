@@ -21,12 +21,13 @@ use crate::utils::DiagnosticsExt;
 /// ```
 ///
 /// And this function will return `["Introspect"]`.
-pub fn extract_derive_attr_names(db: &SimpleParserDatabase, attrs: Vec<Attribute>) -> Vec<String> {
+pub fn extract_derive_attr_names(db: &SimpleParserDatabase, diagnostics: &mut Vec<Diagnostic>, attrs: Vec<Attribute>) -> Vec<String> {
     attrs
         .iter()
         .filter_map(|attr| {
             let args = attr.clone().structurize(db).args;
             if args.is_empty() {
+                diagnostics.push_error("Expected args.".into());
                 None
             } else {
                 Some(args.into_iter().filter_map(|a| {
@@ -52,7 +53,7 @@ pub fn check_derive_attrs_conflicts(
     diagnostics: &mut Vec<Diagnostic>,
     attrs: Vec<Attribute>,
 ) {
-    let attr_names = extract_derive_attr_names(db, attrs);
+    let attr_names = extract_derive_attr_names(db, diagnostics, attrs);
 
     if attr_names.contains(&DOJO_INTROSPECT_DERIVE.to_string())
         && attr_names.contains(&DOJO_PACKED_DERIVE.to_string())
