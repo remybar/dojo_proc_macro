@@ -1,5 +1,4 @@
-#[derive(Serde, Drop)]
-struct IWorldDispatcher{}
+use dojo::world::IWorldDispatcher;
 
 #[starknet::interface]
 pub trait IWorldProvider<T> {
@@ -8,17 +7,22 @@ pub trait IWorldProvider<T> {
 
 #[starknet::component]
 pub mod world_provider_cpt {
-    use super::IWorldDispatcher;
+    use starknet::get_caller_address;
+    use starknet::storage::{StoragePointerReadAccess, StoragePointerWriteAccess};
+
+    use dojo::world::IWorldDispatcher;
 
     #[storage]
-    pub struct Storage {}
+    pub struct Storage {
+        world_dispatcher: IWorldDispatcher,
+    }
 
     #[embeddable_as(WorldProviderImpl)]
     pub impl WorldProvider<
         TContractState, +HasComponent<TContractState>,
     > of super::IWorldProvider<ComponentState<TContractState>> {
         fn world_dispatcher(self: @ComponentState<TContractState>) -> IWorldDispatcher {
-            IWorldDispatcher{}
+            self.world_dispatcher.read()
         }
     }
 
@@ -27,6 +31,9 @@ pub mod world_provider_cpt {
         TContractState, +HasComponent<TContractState>,
     > of InternalTrait<TContractState> {
         fn initializer(ref self: ComponentState<TContractState>) {
+            self
+                .world_dispatcher
+                .write(IWorldDispatcher { contract_address: get_caller_address() });
         }
     }
 }

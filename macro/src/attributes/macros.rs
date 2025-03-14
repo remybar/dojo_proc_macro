@@ -1,6 +1,8 @@
 use crate::utils::debug_macro;
 use cairo_lang_macro::{attribute_macro, ProcMacroResult, TokenStream};
 
+use super::contract::DojoContract;
+
 #[attribute_macro(parent = "dojo")]
 pub fn model(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResult {
     let output = super::helpers::process_struct(token_stream, super::model::process);
@@ -19,7 +21,7 @@ pub fn event(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResult {
 
 #[attribute_macro(parent = "dojo")]
 pub fn contract(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResult {
-    let output = super::contract::process(token_stream);
+    let output = DojoContract::process(token_stream);
 
     debug_macro("dojo::contract", &output);
     output

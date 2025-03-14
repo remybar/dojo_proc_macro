@@ -21,7 +21,11 @@ use crate::utils::DiagnosticsExt;
 /// ```
 ///
 /// And this function will return `["Introspect"]`.
-pub fn extract_derive_attr_names(db: &SimpleParserDatabase, diagnostics: &mut Vec<Diagnostic>, attrs: Vec<Attribute>) -> Vec<String> {
+pub fn extract_derive_attr_names(
+    db: &SimpleParserDatabase,
+    diagnostics: &mut Vec<Diagnostic>,
+    attrs: Vec<Attribute>,
+) -> Vec<String> {
     attrs
         .iter()
         .filter_map(|attr| {

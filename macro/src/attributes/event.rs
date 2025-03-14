@@ -1,13 +1,15 @@
-use cairo_lang_macro::{quote, Diagnostics, ProcMacroResult, TextSpan, Token, TokenStream, TokenTree};
+use cairo_lang_macro::{
+    quote, Diagnostics, ProcMacroResult, TextSpan, Token, TokenStream, TokenTree,
+};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::{ast, helpers::QueryAttrs, TypedSyntaxNode};
 
-use crate::utils::{self, tokenize};
-use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use super::helpers::{self, Member};
+use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use crate::derives;
-use dojo_types::naming;
+use crate::utils::{self, tokenize};
 use crate::utils::{DiagnosticsExt, ProcMacroResultExt};
+use dojo_types::naming;
 
 pub(crate) fn process(
     db: &SimpleParserDatabase,
@@ -30,7 +32,8 @@ pub(crate) fn process(
         ));
     }
 
-    let members = helpers::parse_members(db, &struct_ast.members(db).elements(db), &mut diagnostics);
+    let members =
+        helpers::parse_members(db, &struct_ast.members(db).elements(db), &mut diagnostics);
 
     let mut serialized_keys: Vec<String> = vec![];
     let mut serialized_values: Vec<String> = vec![];
@@ -73,7 +76,9 @@ pub(crate) fn process(
     // Ensures events always derive Introspect if not already derived,
     // and do not derive IntrospectPacked.
     if derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string()) {
-        diagnostics.push_error(format!("Deriving {DOJO_PACKED_DERIVE} on event is not allowed."));
+        diagnostics.push_error(format!(
+            "Deriving {DOJO_PACKED_DERIVE} on event is not allowed."
+        ));
     }
 
     if !derive_attr_names.contains(&DOJO_INTROSPECT_DERIVE.to_string()) {
@@ -98,10 +103,13 @@ pub(crate) fn process(
         &serialized_keys.join("\n"),
         &serialized_values.join("\n"),
         &event_value_derive_attr_names.join(", "),
-        &unique_hash
+        &unique_hash,
     );
 
-    let missing_derive_attr = TokenTree::Ident(Token::new(missing_derive_attrs.join(", "), TextSpan::call_site()));
+    let missing_derive_attr = TokenTree::Ident(Token::new(
+        missing_derive_attrs.join(", "),
+        TextSpan::call_site(),
+    ));
 
     ProcMacroResult::new(quote! {
         // original struct with missing derive attributes
@@ -120,7 +128,7 @@ fn generate_event_code(
     serialized_keys: &String,
     serialized_values: &String,
     event_value_derive_attr_names: &String,
-    unique_hash: &String
+    unique_hash: &String,
 ) -> TokenStream {
     let content = format!(
         "// EventValue on it's own does nothing since events are always emitted and

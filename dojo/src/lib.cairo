@@ -51,6 +51,9 @@ pub mod model {
     pub mod model_value;
     pub use model_value::{ModelValue, ModelValueKey};
 
+    pub mod metadata;
+    pub use metadata::ResourceMetadata;
+
     pub mod interface;
     pub use interface::{IModel, IModelDispatcher, IModelDispatcherTrait};
 
@@ -87,4 +90,27 @@ pub mod utils {
 
     pub mod serde;
     pub use serde::{deserialize_unwrap, serialize_inline};
+}
+
+
+pub mod world {
+    pub(crate) mod errors;
+
+    mod resource;
+    pub use resource::{Resource, ResourceIsNoneTrait};
+
+    mod iworld;
+    pub use iworld::{
+        IWorld, IWorldDispatcher, IWorldDispatcherTrait, IUpgradeableWorld,
+        IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait,
+    };
+
+    #[cfg(target: "test")]
+    pub use iworld::{IWorldTest, IWorldTestDispatcher, IWorldTestDispatcherTrait};
+
+    mod world_contract;
+    pub use world_contract::world;
+
+    pub mod storage;
+    pub use storage::{WorldStorage, WorldStorageTrait};
 }

@@ -1,4 +1,4 @@
-use cairo_lang_macro::{Diagnostic, ProcMacroResult, TokenStream, quote};
+use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::kind::SyntaxKind::ItemStruct;
@@ -18,11 +18,22 @@ pub struct Member {
 
 type ProcessStructFn = fn(&SimpleParserDatabase, TokenStream, &ast::ItemStruct) -> ProcMacroResult;
 
-fn build_struct_without_attrs(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> TokenStream {
+fn build_struct_without_attrs(
+    db: &SimpleParserDatabase,
+    struct_ast: &ast::ItemStruct,
+) -> TokenStream {
     let visibility = tokenize(&struct_ast.visibility(db).as_syntax_node().get_text(db));
     let name = tokenize(&struct_ast.name(db).as_syntax_node().get_text(db));
     let generics = tokenize(&struct_ast.generic_params(db).as_syntax_node().get_text(db));
-    let members = tokenize(&struct_ast.members(db).elements(db).iter().map(|m| m.as_syntax_node().get_text(db)).collect::<Vec<_>>().join(",\n"));
+    let members = tokenize(
+        &struct_ast
+            .members(db)
+            .elements(db)
+            .iter()
+            .map(|m| m.as_syntax_node().get_text(db))
+            .collect::<Vec<_>>()
+            .join(",\n"),
+    );
 
     quote! {
         #visibility struct #name<#generics> {
@@ -39,7 +50,7 @@ pub(crate) fn process_struct(token_stream: TokenStream, func: ProcessStructFn) -
         if n.kind(&db) == ItemStruct {
             let struct_ast = ast::ItemStruct::from_syntax_node(&db, n);
             let original_struct = build_struct_without_attrs(&db, &struct_ast);
-            
+
             return func(&db, original_struct, &struct_ast);
         }
     }
@@ -95,12 +106,3 @@ pub(crate) fn serialize_member_ty(member: &Member, with_self: bool) -> String {
         member.name
     )
 }
-
-/*
-pub(crate) fn deserialize_member_ty(member: &Member, input_name: &str) -> String {
-    format!(
-        "let {} = core::serde::Serde::<{}>::deserialize(ref {input_name})?;\n",
-        member.name, member.ty
-    )
-}
-*/

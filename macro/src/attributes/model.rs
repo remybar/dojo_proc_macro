@@ -1,6 +1,8 @@
 use std::collections::HashSet;
 
-use cairo_lang_macro::{quote, Diagnostics, ProcMacroResult, TextSpan, Token, TokenStream, TokenTree};
+use cairo_lang_macro::{
+    quote, Diagnostics, ProcMacroResult, TextSpan, Token, TokenStream, TokenTree,
+};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
@@ -12,8 +14,11 @@ use crate::derives;
 use crate::utils::tokenize;
 use crate::utils::{proc_macro_result_ext::ProcMacroResultExt, DiagnosticsExt};
 
-
-pub(crate) fn process(db: &SimpleParserDatabase, original_struct: TokenStream, struct_ast: &ast::ItemStruct) -> ProcMacroResult {
+pub(crate) fn process(
+    db: &SimpleParserDatabase,
+    original_struct: TokenStream,
+    struct_ast: &ast::ItemStruct,
+) -> ProcMacroResult {
     let mut diagnostics = vec![];
 
     let model_type = struct_ast
@@ -135,7 +140,7 @@ pub(crate) fn process(db: &SimpleParserDatabase, original_struct: TokenStream, s
             model_value_derive_attr_names.push(attr);
         }
     });
-    
+
     let model_value_derive_attr_names = model_value_derive_attr_names.join(", ");
 
     let is_packed = derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string());
@@ -158,8 +163,11 @@ pub(crate) fn process(db: &SimpleParserDatabase, original_struct: TokenStream, s
         &serialized_values.join(""),
         &unique_hash,
     );
-  
-    let missing_derive_attr = TokenTree::Ident(Token::new(missing_derive_attr_names.join(", "), TextSpan::call_site()));
+
+    let missing_derive_attr = TokenTree::Ident(Token::new(
+        missing_derive_attr_names.join(", "),
+        TextSpan::call_site(),
+    ));
 
     ProcMacroResult::new(quote! {
         // original struct with missing derive attributes
