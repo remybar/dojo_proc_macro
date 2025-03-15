@@ -2,6 +2,7 @@ use crate::utils::debug_macro;
 use cairo_lang_macro::{attribute_macro, ProcMacroResult, TokenStream};
 
 use super::contract::DojoContract;
+use super::library::DojoLibrary;
 
 #[attribute_macro(parent = "dojo")]
 pub fn model(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResult {
@@ -29,7 +30,7 @@ pub fn contract(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResul
 
 #[attribute_macro(parent = "dojo")]
 pub fn library(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResult {
-    let output = super::library::process(token_stream);
+    let output = DojoLibrary::process(token_stream);
 
     debug_macro("dojo::library", &output);
     output

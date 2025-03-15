@@ -12,9 +12,7 @@ use cairo_lang_syntax::node::{
 
 use crate::utils::{tokenize, DiagnosticsExt, ProcMacroResultExt};
 use dojo_types::naming;
-
-const CONSTRUCTOR_FN: &str = "constructor";
-const DOJO_INIT_FN: &str = "dojo_init";
+use crate::constants::{CONSTRUCTOR_FN, DOJO_INIT_FN};
 
 #[derive(Debug)]
 pub struct DojoContract {
