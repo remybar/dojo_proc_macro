@@ -1,9 +1,9 @@
-use cairo_lang_macro::{quote, Diagnostics, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{quote, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::kind::SyntaxKind::{ItemEnum, ItemStruct};
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
-use crate::utils::{proc_macro_result_ext::ProcMacroResultExt, tokenize};
+use crate::helpers::{DojoTokenizer, ProcMacroResultExt};
 
 mod enums;
 mod generics;
@@ -17,25 +17,16 @@ mod utils;
 pub(crate) fn process(token_stream: TokenStream, is_packed: bool) -> ProcMacroResult {
     let db = SimpleParserDatabase::default();
     let (root_node, _diagnostics) = db.parse_token_stream(&token_stream);
-    let mut diagnostics = vec![];
 
     for n in root_node.descendants(&db) {
         match n.kind(&db) {
             ItemStruct => {
                 let struct_ast = ast::ItemStruct::from_syntax_node(&db, n);
-                let token = structs::process_struct_introspect(
-                    &db,
-                    &mut diagnostics,
-                    &struct_ast,
-                    is_packed,
-                );
-                return ProcMacroResult::new(token).with_diagnostics(Diagnostics::new(diagnostics));
+                return structs::DojoStructIntrospect::process(&db, &struct_ast, is_packed);
             }
             ItemEnum => {
                 let enum_ast = ast::ItemEnum::from_syntax_node(&db, n);
-                let token =
-                    enums::process_enum_introspect(&db, &mut diagnostics, &enum_ast, is_packed);
-                return ProcMacroResult::new(token).with_diagnostics(Diagnostics::new(diagnostics));
+                return enums::DojoEnumIntrospect::process(&db, &enum_ast, is_packed);
             }
             _ => {}
         }
@@ -62,11 +53,11 @@ pub(crate) fn generate_introspect(
             generic_types.join(", ")
         )
     };
-    let impl_decl = tokenize(&impl_decl);
+    let impl_decl = DojoTokenizer::tokenize(&impl_decl);
 
-    let size = tokenize(size);
-    let layout = tokenize(layout);
-    let ty = tokenize(ty);
+    let size = DojoTokenizer::tokenize(size);
+    let layout = DojoTokenizer::tokenize(layout);
+    let ty = DojoTokenizer::tokenize(ty);
 
     quote! {
         impl #impl_decl {

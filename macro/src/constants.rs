@@ -7,4 +7,3 @@ pub const CAIRO_DELIMITERS: [char; 7] = ['[', ']', '<', '>', '(', ')', ','];
 
 pub const CONSTRUCTOR_FN: &str = "constructor";
 pub const DOJO_INIT_FN: &str = "dojo_init";
-

@@ -1,6 +1,4 @@
-use cairo_lang_macro::{
-    quote, Diagnostic, Diagnostics, ProcMacroResult, TokenStream
-};
+use cairo_lang_macro::{quote, Diagnostic, Diagnostics, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::with_db::SyntaxNodeWithDb;
 use cairo_lang_syntax::node::Terminal;
@@ -10,8 +8,8 @@ use cairo_lang_syntax::node::{
     TypedSyntaxNode,
 };
 
-use crate::utils::{tokenize, ProcMacroResultExt};
 use crate::constants::{CONSTRUCTOR_FN, DOJO_INIT_FN};
+use crate::helpers::{DojoTokenizer, ProcMacroResultExt};
 use dojo_types::naming;
 
 #[derive(Debug)]
@@ -20,19 +18,18 @@ pub struct DojoLibrary {
 }
 
 impl DojoLibrary {
-
     pub fn process(token_stream: TokenStream) -> ProcMacroResult {
         let db = SimpleParserDatabase::default();
-            let (root_node, _diagnostics) = db.parse_token_stream(&token_stream);
+        let (root_node, _diagnostics) = db.parse_token_stream(&token_stream);
 
-            for n in root_node.descendants(&db) {
-                if n.kind(&db) == ItemModule {
-                    let module_ast = ast::ItemModule::from_syntax_node(&db, n);
-                    return DojoLibrary::process_ast(&db, &module_ast);
-                }
+        for n in root_node.descendants(&db) {
+            if n.kind(&db) == ItemModule {
+                let module_ast = ast::ItemModule::from_syntax_node(&db, n);
+                return DojoLibrary::process_ast(&db, &module_ast);
             }
+        }
 
-            ProcMacroResult::empty()
+        ProcMacroResult::fail(format!("'dojo::library' must be used on module only."))
     }
 
     fn process_ast(db: &SimpleParserDatabase, module_ast: &ast::ItemModule) -> ProcMacroResult {
@@ -55,7 +52,11 @@ impl DojoLibrary {
         let mut has_constructor = false;
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
-            let mut body_nodes: Vec<_> = body.items(db).elements(db).iter().map(|el| {
+            let mut body_nodes: Vec<_> = body
+                .items(db)
+                .elements(db)
+                .iter()
+                .map(|el| {
                     if let ast::ModuleItem::Enum(ref enum_ast) = el {
                         if enum_ast.name(db).text(db).to_string() == "Event" {
                             has_event = true;
@@ -86,11 +87,15 @@ impl DojoLibrary {
                 .collect::<Vec<TokenStream>>();
 
             if has_constructor {
-                return ProcMacroResult::fail(format!("The library {name} cannot have a constructor"));
+                return ProcMacroResult::fail(format!(
+                    "The library {name} cannot have a constructor"
+                ));
             }
 
             if has_init {
-                return ProcMacroResult::fail(format!("The library {name} cannot have a dojo_init"));
+                return ProcMacroResult::fail(format!(
+                    "The library {name} cannot have a dojo_init"
+                ));
             }
 
             if !has_event {
@@ -137,8 +142,8 @@ impl DojoLibrary {
         }}
     }}");
 
-        let name = tokenize(&name);
-        let mut content = TokenStream::new(vec![tokenize(&content)]);
+        let name = DojoTokenizer::tokenize(&name);
+        let mut content = TokenStream::new(vec![DojoTokenizer::tokenize(&content)]);
         content.extend(body.into_iter());
 
         quote! {

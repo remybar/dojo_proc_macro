@@ -1,5 +1,5 @@
 use cairo_lang_macro::{
-    quote, Diagnostic, Diagnostics, ProcMacroResult, TextSpan, Token, TokenStream, TokenTree,
+    quote, Diagnostic, ProcMacroResult, TextSpan, Token, TokenStream, TokenTree,
 };
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::with_db::SyntaxNodeWithDb;
@@ -10,9 +10,9 @@ use cairo_lang_syntax::node::{
     TypedSyntaxNode,
 };
 
-use crate::utils::{tokenize, DiagnosticsExt, ProcMacroResultExt};
-use dojo_types::naming;
 use crate::constants::{CONSTRUCTOR_FN, DOJO_INIT_FN};
+use crate::helpers::{DiagnosticsExt, DojoTokenizer, ProcMacroResultExt};
+use dojo_types::naming;
 
 #[derive(Debug)]
 pub struct DojoContract {
@@ -31,7 +31,7 @@ impl DojoContract {
             }
         }
 
-        ProcMacroResult::empty()
+        ProcMacroResult::fail(format!("'dojo::contract' must be used on module only."))
     }
 
     fn process_ast(db: &SimpleParserDatabase, module_ast: &ast::ItemModule) -> ProcMacroResult {
@@ -131,8 +131,7 @@ impl DojoContract {
             }
 
             let contract_code = DojoContract::generate_contract_code(&name, body_nodes);
-            return ProcMacroResult::new(contract_code)
-                .with_diagnostics(Diagnostics::new(contract.diagnostics));
+            return ProcMacroResult::finalize(contract_code, contract.diagnostics);
         }
 
         ProcMacroResult::fail(format!("The contract '{name}' is empty."))
@@ -176,8 +175,8 @@ impl DojoContract {
         }}
     }}
 ");
-        let name = tokenize(&name);
-        let mut content = TokenStream::new(vec![tokenize(&content)]);
+        let name = DojoTokenizer::tokenize(&name);
+        let mut content = TokenStream::new(vec![DojoTokenizer::tokenize(&content)]);
         content.extend(body.into_iter());
 
         quote! {
