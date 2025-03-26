@@ -1,41 +1,48 @@
-use cairo_lang_macro::{quote, Diagnostic, Diagnostics, ProcMacroResult, TokenStream};
+use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::with_db::SyntaxNodeWithDb;
 use cairo_lang_syntax::node::Terminal;
 use cairo_lang_syntax::node::{
     ast::{self, MaybeModuleBody},
-    kind::SyntaxKind::ItemModule,
     TypedSyntaxNode,
 };
 
 use crate::constants::{CONSTRUCTOR_FN, DOJO_INIT_FN};
-use crate::helpers::{DojoTokenizer, ProcMacroResultExt};
+use crate::helpers::{DojoParser, DojoTokenizer, ProcMacroResultExt};
 use dojo_types::naming;
 
 #[derive(Debug)]
 pub struct DojoLibrary {
     diagnostics: Vec<Diagnostic>,
+    has_event: bool,
+    has_storage: bool,
+    has_init: bool,
+    has_constructor: bool
 }
 
 impl DojoLibrary {
+    pub fn new() -> Self {
+        Self {
+            diagnostics: vec![],
+            has_event: false,
+            has_storage: false,
+            has_init: false,
+            has_constructor: false
+        }
+    }
+
     pub fn process(token_stream: TokenStream) -> ProcMacroResult {
         let db = SimpleParserDatabase::default();
-        let (root_node, _diagnostics) = db.parse_token_stream(&token_stream);
 
-        for n in root_node.descendants(&db) {
-            if n.kind(&db) == ItemModule {
-                let module_ast = ast::ItemModule::from_syntax_node(&db, n);
-                return DojoLibrary::process_ast(&db, &module_ast);
-            }
+        if let Some(module_ast) = DojoParser::parse_and_find_module(&db, &token_stream) {
+            return DojoLibrary::process_ast(&db, &module_ast);
         }
 
         ProcMacroResult::fail(format!("'dojo::library' must be used on module only."))
     }
 
     fn process_ast(db: &SimpleParserDatabase, module_ast: &ast::ItemModule) -> ProcMacroResult {
-        let mut library = DojoLibrary {
-            diagnostics: vec![],
-        };
+        let mut library = DojoLibrary::new();
 
         let name = module_ast.name(db).text(db).to_string();
 
@@ -46,109 +53,107 @@ impl DojoLibrary {
             ));
         }
 
-        let mut has_event = false;
-        let mut has_storage = false;
-        let mut has_init = false;
-        let mut has_constructor = false;
-
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let mut body_nodes: Vec<_> = body
                 .items(db)
                 .elements(db)
                 .iter()
                 .map(|el| {
-                    if let ast::ModuleItem::Enum(ref enum_ast) = el {
+                    match el {
+                        ast::ModuleItem::Enum(ref enum_ast) => {
                         if enum_ast.name(db).text(db).to_string() == "Event" {
-                            has_event = true;
                             return library.merge_event(db, enum_ast.clone());
                         }
-                    } else if let ast::ModuleItem::Struct(ref struct_ast) = el {
+                    },
+                    ast::ModuleItem::Struct(ref struct_ast) => {
                         if struct_ast.name(db).text(db).to_string() == "Storage" {
-                            has_storage = true;
                             return library.merge_storage(db, struct_ast.clone());
                         }
-                    } else if let ast::ModuleItem::FreeFunction(ref fn_ast) = el {
-                        let fn_decl = fn_ast.declaration(db);
-                        let fn_name = fn_decl.name(db).text(db);
+                    },
+                    ast::ModuleItem::FreeFunction(ref fn_ast) => {
+                        let fn_name = fn_ast.declaration(db).name(db).text(db);
 
                         if fn_name == CONSTRUCTOR_FN {
-                            has_constructor = true;
+                            library.has_constructor = true;
                         }
 
                         if fn_name == DOJO_INIT_FN {
-                            has_init = true;
+                            library.has_init = true;
                         }
-                    }
+                    },
+                    _ => {}
+                };
 
-                    let el = el.as_syntax_node();
-                    let el = SyntaxNodeWithDb::new(&el, db);
-                    quote! { #el }
-                })
-                .collect::<Vec<TokenStream>>();
+                let el = el.as_syntax_node();
+                let el = SyntaxNodeWithDb::new(&el, db);
+                quote! { #el }
+            })
+            .collect::<Vec<TokenStream>>();
 
-            if has_constructor {
+            if library.has_constructor {
                 return ProcMacroResult::fail(format!(
                     "The library {name} cannot have a constructor"
                 ));
             }
 
-            if has_init {
+            if library.has_init {
                 return ProcMacroResult::fail(format!(
-                    "The library {name} cannot have a dojo_init"
+                    "The library {name} cannot have a {DOJO_INIT_FN}"
                 ));
             }
 
-            if !has_event {
+            if !library.has_event {
                 body_nodes.push(library.create_event())
             }
 
-            if !has_storage {
+            if !library.has_storage {
                 body_nodes.push(library.create_storage())
             }
 
             let library_code = DojoLibrary::generate_library_code(&name, body_nodes);
-            return ProcMacroResult::new(library_code)
-                .with_diagnostics(Diagnostics::new(library.diagnostics));
+            return ProcMacroResult::finalize(library_code, library.diagnostics);
         }
 
         ProcMacroResult::fail(format!("The library '{name}' is empty."))
     }
 
     fn generate_library_code(name: &String, body: Vec<TokenStream>) -> TokenStream {
-        let content = format!(
-            "use dojo::contract::components::world_provider::{{world_provider_cpt, IWorldProvider}};
-    use dojo::contract::ILibrary;
-    use dojo::meta::IDeployedResource;
-
-    component!(path: world_provider_cpt, storage: world_provider, event: WorldProviderEvent);
-   
-    #[abi(embed_v0)]
-    impl WorldProviderImpl = world_provider_cpt::WorldProviderImpl<ContractState>;
-   
-    #[abi(embed_v0)]
-    pub impl {name}__LibraryImpl of ILibrary<ContractState> {{}}
-
-    #[abi(embed_v0)]
-    pub impl {name}__DeployedLibraryImpl of IDeployedResource<ContractState> {{
-        fn dojo_name(self: @ContractState) -> ByteArray {{
-            \"{name}\"
-        }}
-    }}
-
-    #[generate_trait]
-    impl {name}InternalImpl of {name}InternalTrait {{
-        fn world(self: @ContractState, namespace: @ByteArray) -> dojo::world::storage::WorldStorage {{
-            dojo::world::WorldStorageTrait::new(self.world_provider.world_dispatcher(), namespace)
-        }}
-    }}");
-
+        let library_impl_name = DojoTokenizer::tokenize(&format!("{name}__LibraryImpl"));
+        let dojo_name = DojoTokenizer::tokenize(&format!("\"{name}\""));
         let name = DojoTokenizer::tokenize(&name);
-        let mut content = TokenStream::new(vec![DojoTokenizer::tokenize(&content)]);
+
+        let mut content = TokenStream::new(vec![]);
         content.extend(body.into_iter());
 
         quote! {
             #[starknet::contract]
             pub mod #name {
+                use dojo::contract::components::world_provider::{world_provider_cpt, IWorldProvider};
+                use dojo::contract::ILibrary;
+                use dojo::meta::IDeployedResource;
+
+                component!(path: world_provider_cpt, storage: world_provider, event: WorldProviderEvent);
+            
+                #[abi(embed_v0)]
+                impl WorldProviderImpl = world_provider_cpt::WorldProviderImpl<ContractState>;
+   
+                #[abi(embed_v0)]
+                pub impl #library_impl_name of ILibrary<ContractState> {}
+
+                #[abi(embed_v0)]
+                pub impl DeployedLibraryImpl of IDeployedResource<ContractState> {
+                    fn dojo_name(self: @ContractState) -> ByteArray {
+                        #dojo_name
+                    }
+                }
+
+                #[generate_trait]
+                impl InternalImpl of InternalTrait {
+                    fn world(self: @ContractState, namespace: @ByteArray) -> dojo::world::storage::WorldStorage {
+                        dojo::world::WorldStorageTrait::new(self.world_provider.world_dispatcher(), namespace)
+                    }
+                }
+
                 #content
             }
         }
@@ -159,6 +164,8 @@ impl DojoLibrary {
         db: &SimpleParserDatabase,
         enum_ast: ast::ItemEnum,
     ) -> TokenStream {
+        self.has_event = true;
+
         let variants = enum_ast.variants(db).as_syntax_node();
         let variants = SyntaxNodeWithDb::new(&variants, db);
 
@@ -188,6 +195,8 @@ impl DojoLibrary {
         db: &SimpleParserDatabase,
         struct_ast: ast::ItemStruct,
     ) -> TokenStream {
+        self.has_storage = true;
+
         let members = struct_ast.members(db).as_syntax_node();
         let members = SyntaxNodeWithDb::new(&members, db);
 

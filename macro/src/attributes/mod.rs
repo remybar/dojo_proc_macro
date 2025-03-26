@@ -10,7 +10,7 @@ pub mod model;
 pub fn model(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResult {
     let output = model::DojoModel::process(token_stream);
 
-    debug_macro("dojo::model", &output);
+    debug_macro("model", &output);
     output
 }
 
@@ -18,7 +18,7 @@ pub fn model(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResult {
 pub fn event(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResult {
     let output = event::DojoEvent::process(token_stream);
 
-    debug_macro("dojo::event", &output);
+    debug_macro("event", &output);
     output
 }
 
@@ -26,7 +26,7 @@ pub fn event(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResult {
 pub fn contract(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResult {
     let output = contract::DojoContract::process(token_stream);
 
-    debug_macro("dojo::contract", &output);
+    debug_macro("contract", &output);
     output
 }
 
@@ -34,6 +34,6 @@ pub fn contract(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResul
 pub fn library(_args: TokenStream, token_stream: TokenStream) -> ProcMacroResult {
     let output = library::DojoLibrary::process(token_stream);
 
-    debug_macro("dojo::library", &output);
+    debug_macro("library", &output);
     output
 }

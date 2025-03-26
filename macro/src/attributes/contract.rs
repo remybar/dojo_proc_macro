@@ -1,43 +1,50 @@
 use cairo_lang_macro::{
-    quote, Diagnostic, ProcMacroResult, TextSpan, Token, TokenStream, TokenTree,
+    quote, Diagnostic, ProcMacroResult, TokenStream
 };
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::with_db::SyntaxNodeWithDb;
 use cairo_lang_syntax::node::Terminal;
 use cairo_lang_syntax::node::{
     ast::{self, MaybeModuleBody, OptionReturnTypeClause},
-    kind::SyntaxKind::ItemModule,
     TypedSyntaxNode,
 };
 
 use crate::constants::{CONSTRUCTOR_FN, DOJO_INIT_FN};
-use crate::helpers::{DiagnosticsExt, DojoTokenizer, ProcMacroResultExt};
+use crate::helpers::{DiagnosticsExt, DojoParser, DojoTokenizer, ProcMacroResultExt};
 use dojo_types::naming;
 
 #[derive(Debug)]
 pub struct DojoContract {
     diagnostics: Vec<Diagnostic>,
+    has_event: bool,
+    has_storage: bool,
+    has_init: bool,
+    has_constructor: bool
 }
 
 impl DojoContract {
+    pub fn new() -> Self {
+        Self {
+            diagnostics: vec![],
+            has_event: false,
+            has_storage: false,
+            has_init: false,
+            has_constructor: false
+        }
+    }
+
     pub fn process(token_stream: TokenStream) -> ProcMacroResult {
         let db = SimpleParserDatabase::default();
-        let (root_node, _diagnostics) = db.parse_token_stream(&token_stream);
 
-        for n in root_node.descendants(&db) {
-            if n.kind(&db) == ItemModule {
-                let module_ast = ast::ItemModule::from_syntax_node(&db, n);
-                return DojoContract::process_ast(&db, &module_ast);
-            }
+        if let Some(module_ast) = DojoParser::parse_and_find_module(&db, &token_stream) {
+            return DojoContract::process_ast(&db, &module_ast);
         }
 
         ProcMacroResult::fail(format!("'dojo::contract' must be used on module only."))
     }
 
     fn process_ast(db: &SimpleParserDatabase, module_ast: &ast::ItemModule) -> ProcMacroResult {
-        let mut contract = DojoContract {
-            diagnostics: vec![],
-        };
+        let mut contract = DojoContract::new();
 
         let name = module_ast.name(db).text(db).to_string();
 
@@ -48,41 +55,36 @@ impl DojoContract {
             ));
         }
 
-        let mut has_event = false;
-        let mut has_storage = false;
-        let mut has_init = false;
-        let mut has_constructor = false;
-
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {
             let mut body_nodes = body
                 .items(db)
                 .elements(db)
                 .iter()
                 .map(|el| {
-                    if let ast::ModuleItem::Enum(ref enum_ast) = el {
-                        if enum_ast.name(db).text(db).to_string() == "Event" {
-                            has_event = true;
-                            return contract.merge_event(db, &enum_ast);
+                    match el {
+                        ast::ModuleItem::Enum(ref enum_ast) => {
+                            if enum_ast.name(db).text(db).to_string() == "Event" {
+                                return contract.merge_event(db, &enum_ast);
+                            }
                         }
-                    } else if let ast::ModuleItem::Struct(ref struct_ast) = el {
-                        if struct_ast.name(db).text(db).to_string() == "Storage" {
-                            has_storage = true;
-                            return contract.merge_storage(db, &struct_ast);
+                        ast::ModuleItem::Struct(ref struct_ast) => {
+                            if struct_ast.name(db).text(db).to_string() == "Storage" {
+                                return contract.merge_storage(db, &struct_ast);
+                            }
                         }
-                    } else if let ast::ModuleItem::FreeFunction(ref fn_ast) = el {
-                        let fn_decl = fn_ast.declaration(db);
-                        let fn_name = fn_decl.name(db).text(db);
+                        ast::ModuleItem::FreeFunction(ref fn_ast) => {
+                            let fn_name = fn_ast.declaration(db).name(db).text(db);
 
-                        if fn_name == CONSTRUCTOR_FN {
-                            has_constructor = true;
-                            return contract.handle_constructor_fn(db, fn_ast);
-                        }
+                            if fn_name == CONSTRUCTOR_FN {
+                                return contract.handle_constructor_fn(db, fn_ast);
+                            }
 
-                        if fn_name == DOJO_INIT_FN {
-                            has_init = true;
-                            return contract.handle_init_fn(db, fn_ast);
+                            if fn_name == DOJO_INIT_FN {
+                                return contract.handle_init_fn(db, fn_ast);
+                            }
                         }
-                    }
+                        _ => {}
+                    };
 
                     let el = el.as_syntax_node();
                     let el = SyntaxNodeWithDb::new(&el, db);
@@ -90,43 +92,19 @@ impl DojoContract {
                 })
                 .collect::<Vec<TokenStream>>();
 
-            // TODO RBA: export ctor body / init params+body => add them once here
-            if !has_constructor {
-                let node = quote! {
-                    #[constructor]
-                    fn constructor(ref self: ContractState) {
-                        self.world_provider.initializer();
-                    }
-                };
-
-                body_nodes.push(node);
+            if !contract.has_constructor {
+                body_nodes.push(contract.create_constructor());
             }
 
-            if !has_init {
-                let init_name = TokenTree::Ident(Token::new(DOJO_INIT_FN, TextSpan::call_site()));
-                body_nodes.push(quote!{
-                    #[abi(per_item)]
-                    #[generate_trait]
-                    pub impl IDojoInitImpl of IDojoInit {
-                        #[external(v0)]
-                        fn #init_name(self: @ContractState) {
-                            if starknet::get_caller_address() != self.world_provider.world_dispatcher().contract_address {
-                                core::panics::panic_with_byte_array(
-                                    @format!("Only the world can init contract `{}`, but caller is `{:?}`",
-                                    self.dojo_name(),
-                                    starknet::get_caller_address(),
-                                ));
-                            }
-                        }
-                    }
-                });
+            if !contract.has_init {
+                body_nodes.push(contract.create_init_fn());
             }
 
-            if !has_event {
+            if !contract.has_event {
                 body_nodes.push(contract.create_event());
             }
 
-            if !has_storage {
+            if !contract.has_storage {
                 body_nodes.push(contract.create_storage());
             }
 
@@ -138,50 +116,53 @@ impl DojoContract {
     }
 
     fn generate_contract_code(name: &String, body: Vec<TokenStream>) -> TokenStream {
-        let content = format!(
-            "
-    use dojo::contract::components::world_provider::{{world_provider_cpt, world_provider_cpt::InternalTrait as WorldProviderInternal, IWorldProvider}};
-    use dojo::contract::components::upgradeable::upgradeable_cpt;
-    use dojo::contract::IContract;
-    use dojo::meta::IDeployedResource;
-
-    component!(path: world_provider_cpt, storage: world_provider, event: WorldProviderEvent);
-    component!(path: upgradeable_cpt, storage: upgradeable, event: UpgradeableEvent);
-
-    #[abi(embed_v0)]
-    impl WorldProviderImpl = world_provider_cpt::WorldProviderImpl<ContractState>;
-    
-    #[abi(embed_v0)]
-    impl UpgradeableImpl = upgradeable_cpt::UpgradeableImpl<ContractState>;
-
-    #[abi(embed_v0)]
-    pub impl {name}__ContractImpl of IContract<ContractState> {{}}
-
-    #[abi(embed_v0)]
-    pub impl {name}__DeployedContractImpl of IDeployedResource<ContractState> {{
-        fn dojo_name(self: @ContractState) -> ByteArray {{
-            \"{name}\"
-        }}
-    }}
-
-    #[generate_trait]
-    impl {name}InternalImpl of {name}InternalTrait {{
-        fn world(self: @ContractState, namespace: @ByteArray) -> dojo::world::storage::WorldStorage {{
-            dojo::world::WorldStorageTrait::new(self.world_provider.world_dispatcher(), namespace)
-        }}
-
-        fn world_ns_hash(self: @ContractState, namespace_hash: felt252) -> dojo::world::storage::WorldStorage {{
-            dojo::world::WorldStorageTrait::new_from_hash(self.world_provider.world_dispatcher(), namespace_hash)
-        }}
-    }}
-");
+        let contract_impl_name = DojoTokenizer::tokenize(&format!("{name}__ContractImpl"));
+        let dojo_name = DojoTokenizer::tokenize(&format!("\"{name}\""));
         let name = DojoTokenizer::tokenize(&name);
-        let mut content = TokenStream::new(vec![DojoTokenizer::tokenize(&content)]);
+        
+        let mut content = TokenStream::new(vec![]);
         content.extend(body.into_iter());
 
         quote! {
             #[starknet::contract]
             pub mod #name {
+                use dojo::contract::components::world_provider::{
+                    world_provider_cpt, world_provider_cpt::InternalTrait as WorldProviderInternal, IWorldProvider
+                };
+                use dojo::contract::components::upgradeable::upgradeable_cpt;
+                use dojo::contract::IContract;
+                use dojo::meta::IDeployedResource;
+
+                component!(path: world_provider_cpt, storage: world_provider, event: WorldProviderEvent);
+                component!(path: upgradeable_cpt, storage: upgradeable, event: UpgradeableEvent);
+
+                #[abi(embed_v0)]
+                impl WorldProviderImpl = world_provider_cpt::WorldProviderImpl<ContractState>;
+                
+                #[abi(embed_v0)]
+                impl UpgradeableImpl = upgradeable_cpt::UpgradeableImpl<ContractState>;
+
+                #[abi(embed_v0)]
+                pub impl #contract_impl_name of IContract<ContractState> {}
+
+                #[abi(embed_v0)]
+                pub impl DeployedContractImpl of IDeployedResource<ContractState> {
+                    fn dojo_name(self: @ContractState) -> ByteArray {
+                        #dojo_name
+                    }
+                }
+
+                #[generate_trait]
+                impl InternalImpl of InternalTrait {
+                    fn world(self: @ContractState, namespace: @ByteArray) -> dojo::world::storage::WorldStorage {
+                        dojo::world::WorldStorageTrait::new(self.world_provider.world_dispatcher(), namespace)
+                    }
+
+                    fn world_ns_hash(self: @ContractState, namespace_hash: felt252) -> dojo::world::storage::WorldStorage {
+                        dojo::world::WorldStorageTrait::new_from_hash(self.world_provider.world_dispatcher(), namespace_hash)
+                    }
+                }
+
                 #content
             }
         }
@@ -194,12 +175,15 @@ impl DojoContract {
         db: &SimpleParserDatabase,
         fn_ast: &ast::FunctionWithBody,
     ) -> TokenStream {
+        self.has_constructor = true;
+
         if !is_valid_constructor_params(db, &fn_ast) {
             self.diagnostics.push_error(
-                "The constructor must have exactly one parameter, which is `ref self: \
-                    ContractState`. Add a `dojo_init` function instead if you need to \
+                format!(
+                    "The constructor must have exactly one parameter, which is `ref self: \
+                    ContractState`. Add a `{DOJO_INIT_FN}` function instead if you need to \
                     initialize the contract with parameters."
-                    .to_string(),
+                )
             );
         }
 
@@ -218,17 +202,27 @@ impl DojoContract {
         }
     }
 
+    fn create_constructor(&self) -> TokenStream {
+        quote! {
+            #[constructor]
+            fn constructor(ref self: ContractState) {
+                self.world_provider.initializer();
+            }
+        }
+    }
+
     fn handle_init_fn(
         &mut self,
         db: &SimpleParserDatabase,
         fn_ast: &ast::FunctionWithBody,
     ) -> TokenStream {
+        self.has_init = true;
+
         if let OptionReturnTypeClause::ReturnTypeClause(_) =
             fn_ast.declaration(db).signature(db).ret_ty(db)
         {
             self.diagnostics.push_error(format!(
-                "The {} function cannot have a return type.",
-                DOJO_INIT_FN
+                "The {DOJO_INIT_FN} function cannot have a return type."
             ));
         }
 
@@ -255,11 +249,34 @@ impl DojoContract {
         }
     }
 
+    fn create_init_fn(&self) -> TokenStream {
+        let init_name = DojoTokenizer::tokenize(DOJO_INIT_FN);
+
+        quote!{
+            #[abi(per_item)]
+            #[generate_trait]
+            pub impl IDojoInitImpl of IDojoInit {
+                #[external(v0)]
+                fn #init_name(self: @ContractState) {
+                    if starknet::get_caller_address() != self.world_provider.world_dispatcher().contract_address {
+                        core::panics::panic_with_byte_array(
+                            @format!("Only the world can init contract `{}`, but caller is `{:?}`",
+                            self.dojo_name(),
+                            starknet::get_caller_address(),
+                        ));
+                    }
+                }
+            }
+        }
+    }
+
     pub fn merge_event(
         &mut self,
         db: &SimpleParserDatabase,
         enum_ast: &ast::ItemEnum,
     ) -> TokenStream {
+        self.has_event = true;
+
         let variants = enum_ast.variants(db).as_syntax_node();
         let variants = SyntaxNodeWithDb::new(&variants, db);
 
@@ -290,6 +307,8 @@ impl DojoContract {
         db: &SimpleParserDatabase,
         struct_ast: &ast::ItemStruct,
     ) -> TokenStream {
+        self.has_storage = true;
+
         let members = struct_ast.members(db).as_syntax_node();
         let members = SyntaxNodeWithDb::new(&members, db);
 

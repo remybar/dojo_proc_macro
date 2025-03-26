@@ -5,7 +5,7 @@ use cairo_lang_syntax::attribute::structured::AttributeStructurize;
 use cairo_lang_syntax::node::ast::Attribute;
 use cairo_lang_syntax::node::ast::Member as MemberAst;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::kind::SyntaxKind::{ExprParenthesized, ItemStruct};
+use cairo_lang_syntax::node::kind::SyntaxKind::{ExprParenthesized, ItemStruct, ItemModule};
 use cairo_lang_syntax::node::Terminal;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
@@ -24,6 +24,22 @@ impl DojoParser {
             if n.kind(db) == ItemStruct {
                 let struct_ast = ast::ItemStruct::from_syntax_node(db, n);
                 return Some(struct_ast);
+            }
+        }
+
+        None
+    }
+
+        pub(crate) fn parse_and_find_module(
+        db: &SimpleParserDatabase,
+        token_stream: &TokenStream,
+    ) -> Option<ast::ItemModule> {
+        let (root_node, _diagnostics) = db.parse_token_stream(token_stream);
+
+        for n in root_node.descendants(db) {
+            if n.kind(db) == ItemModule {
+                let module_ast = ast::ItemModule::from_syntax_node(db, n);
+                return Some(module_ast);
             }
         }
 

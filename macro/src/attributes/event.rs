@@ -1,5 +1,5 @@
 use cairo_lang_macro::{
-    quote, Diagnostic, Diagnostics, ProcMacroResult, TextSpan, Token, TokenStream, TokenTree,
+    quote, Diagnostic, ProcMacroResult, TokenStream,
 };
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::{ast, helpers::QueryAttrs, TypedSyntaxNode};
@@ -140,20 +140,19 @@ impl DojoEvent {
             &unique_hash,
         );
 
-        let missing_derive_attr = TokenTree::Ident(Token::new(
-            missing_derive_attrs.join(", "),
-            TextSpan::call_site(),
-        ));
+        let missing_derive_attr = DojoTokenizer::tokenize(&missing_derive_attrs.join(", "));
 
-        ProcMacroResult::new(quote! {
-            // original struct with missing derive attributes
-            #[derive(#missing_derive_attr)]
-            #original_struct
+        ProcMacroResult::finalize(
+            quote! {
+                // original struct with missing derive attributes
+                #[derive(#missing_derive_attr)]
+                #original_struct
 
-            // model
-            #event_code
-        })
-        .with_diagnostics(Diagnostics::new(event.diagnostics))
+                // model
+                #event_code
+            },
+            event.diagnostics
+        )
     }
 
     fn generate_event_code(
