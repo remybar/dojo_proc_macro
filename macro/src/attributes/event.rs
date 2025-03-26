@@ -6,9 +6,8 @@ use cairo_lang_syntax::node::{ast, helpers::QueryAttrs, TypedSyntaxNode};
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use crate::helpers::{
-    self, DiagnosticsExt, DojoParser, DojoSerializer, DojoTokenizer, Member, ProcMacroResultExt,
+    self, DiagnosticsExt, DojoChecker, DojoParser, DojoFormatter, DojoTokenizer, Member, ProcMacroResultExt
 };
-use dojo_types::naming;
 
 #[derive(Debug)]
 pub struct DojoEvent {
@@ -35,8 +34,6 @@ impl DojoEvent {
     fn process_ast(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> ProcMacroResult {
         let mut event = DojoEvent::new();
 
-        let original_struct = DojoTokenizer::rebuild_original_struct(&db, &struct_ast);
-
         let event_name = struct_ast
             .name(db)
             .as_syntax_node()
@@ -44,11 +41,8 @@ impl DojoEvent {
             .trim()
             .to_string();
 
-        if !naming::is_name_valid(&event_name) {
-            return ProcMacroResult::fail(format!(
-                "The event name '{event_name}' can only contain characters (a-z/A-Z), \
-                digits (0-9) and underscore (_)."
-            ));
+        if let Some(failure) = DojoChecker::is_name_valid("event", &event_name) {
+            return failure;
         }
 
         let members = DojoParser::parse_members(
@@ -84,7 +78,7 @@ impl DojoEvent {
                 if m.key {
                     None
                 } else {
-                    Some(format!("pub {}: {},\n", m.name, m.ty))
+                    Some(DojoFormatter::get_member_declaration(&m.name, &m.ty))
                 }
             })
             .collect::<Vec<_>>();
@@ -130,6 +124,8 @@ impl DojoEvent {
             &struct_ast.members(db).elements(db),
         )
         .to_string();
+
+        let original_struct = DojoTokenizer::rebuild_original_struct(&db, &struct_ast);
 
         let event_code = DojoEvent::generate_event_code(
             &event_name,
@@ -248,9 +244,9 @@ pub mod e_{type_name} {{
     ) {
         members.iter().for_each(|member| {
             if member.key {
-                serialized_keys.push(DojoSerializer::serialize_member_ty(member, true));
+                serialized_keys.push(DojoFormatter::serialize_member_ty(member, true));
             } else {
-                serialized_values.push(DojoSerializer::serialize_member_ty(member, true));
+                serialized_values.push(DojoFormatter::serialize_member_ty(member, true));
             }
         });
     }

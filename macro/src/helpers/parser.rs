@@ -13,7 +13,10 @@ use crate::helpers::{DiagnosticsExt, Member};
 
 pub struct DojoParser {}
 
+/// DojoParser provides some functions to parse TokenStream/SyntaxNode.
 impl DojoParser {
+
+    /// Parse an input token stream and return a ItemStruct syntax node if found.
     pub(crate) fn parse_and_find_struct(
         db: &SimpleParserDatabase,
         token_stream: &TokenStream,
@@ -30,7 +33,8 @@ impl DojoParser {
         None
     }
 
-        pub(crate) fn parse_and_find_module(
+    /// Parse an input token stream and return a ItemModule syntax node if found.
+    pub(crate) fn parse_and_find_module(
         db: &SimpleParserDatabase,
         token_stream: &TokenStream,
     ) -> Option<ast::ItemModule> {
@@ -46,6 +50,8 @@ impl DojoParser {
         None
     }
 
+    /// Parse the input token stream of an inline proc macro as a
+    /// parenthesized expression.
     pub(crate) fn parse_inline_args(
         db: &SimpleParserDatabase,
         token_stream: &TokenStream,
@@ -61,6 +67,7 @@ impl DojoParser {
         None
     }
 
+    /// Parse a list of member syntax nodes into a list of `Member`.
     pub(crate) fn parse_members(
         db: &SimpleParserDatabase,
         members: &[MemberAst],

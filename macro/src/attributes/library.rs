@@ -8,8 +8,7 @@ use cairo_lang_syntax::node::{
 };
 
 use crate::constants::{CONSTRUCTOR_FN, DOJO_INIT_FN};
-use crate::helpers::{DojoParser, DojoTokenizer, ProcMacroResultExt};
-use dojo_types::naming;
+use crate::helpers::{DojoChecker, DojoParser, DojoTokenizer, ProcMacroResultExt};
 
 #[derive(Debug)]
 pub struct DojoLibrary {
@@ -46,11 +45,8 @@ impl DojoLibrary {
 
         let name = module_ast.name(db).text(db).to_string();
 
-        if !naming::is_name_valid(&name) {
-            return ProcMacroResult::fail(format!(
-                "The library name '{name}' can only contain characters (a-z/A-Z), \
-                digits (0-9) and underscore (_)."
-            ));
+        if let Some(failure) = DojoChecker::is_name_valid("library", &name) {
+            return failure;
         }
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {

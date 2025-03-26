@@ -10,8 +10,7 @@ use cairo_lang_syntax::node::{
 };
 
 use crate::constants::{CONSTRUCTOR_FN, DOJO_INIT_FN};
-use crate::helpers::{DiagnosticsExt, DojoParser, DojoTokenizer, ProcMacroResultExt};
-use dojo_types::naming;
+use crate::helpers::{DiagnosticsExt, DojoChecker, DojoParser, DojoTokenizer, ProcMacroResultExt};
 
 #[derive(Debug)]
 pub struct DojoContract {
@@ -48,11 +47,8 @@ impl DojoContract {
 
         let name = module_ast.name(db).text(db).to_string();
 
-        if !naming::is_name_valid(&name) {
-            return ProcMacroResult::fail(format!(
-                "The contract name '{name}' can only contain characters (a-z/A-Z), \
-                digits (0-9) and underscore (_)."
-            ));
+        if let Some(failure) = DojoChecker::is_name_valid("contract", &name) {
+            return failure;
         }
 
         if let MaybeModuleBody::Some(body) = module_ast.body(db) {

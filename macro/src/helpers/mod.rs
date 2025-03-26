@@ -18,8 +18,8 @@ pub use checker::*;
 pub mod parser;
 pub use parser::*;
 
-pub mod serializer;
-pub use serializer::*;
+pub mod formatter;
+pub use formatter::*;
 
 pub mod tokenizer;
 pub use tokenizer::*;

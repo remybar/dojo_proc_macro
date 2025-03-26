@@ -2,6 +2,12 @@ use cairo_lang_macro::ProcMacroResult;
 
 use crate::helpers::DiagnosticExt;
 
+/// Print the output of a proc macro (output token stream and diagnostics),
+/// if the global DOJO_DEBUG_MACRO or the specific DOJO_DEBUG_<ELEMENT>_MACRO
+/// environment variable is set.
+/// 
+/// TODO: once fully integrated to the Dojo repo, this function should
+/// be removed and `scarb expand` should be used instead.
 pub fn debug_macro(element: &str, res: &ProcMacroResult) {
     let element = element.to_ascii_uppercase();
 

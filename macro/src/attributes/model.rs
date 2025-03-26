@@ -4,11 +4,10 @@ use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
-use dojo_types::naming;
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use crate::helpers::{
-    self, DiagnosticsExt, DojoParser, DojoSerializer, DojoTokenizer, Member, ProcMacroResultExt,
+    self, DiagnosticsExt, DojoChecker, DojoParser, DojoFormatter, DojoTokenizer, Member, ProcMacroResultExt
 };
 
 #[derive(Debug)]
@@ -35,8 +34,6 @@ impl DojoModel {
     fn process_ast(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> ProcMacroResult {
         let mut model = DojoModel::new();
 
-        let original_struct = DojoTokenizer::rebuild_original_struct(&db, &struct_ast);
-
         let model_type = struct_ast
             .name(db)
             .as_syntax_node()
@@ -44,11 +41,8 @@ impl DojoModel {
             .trim()
             .to_string();
 
-        if !naming::is_name_valid(&model_type) {
-            return ProcMacroResult::fail(format!(
-                "The model name '{model_type}' can only contain characters (a-z/A-Z), \
-            digits (0-9) and underscore (_)."
-            ));
+        if let Some(failure) = DojoChecker::is_name_valid("model", &model_type) {
+            return failure;
         }
 
         let mut values: Vec<Member> = vec![];
@@ -76,11 +70,11 @@ impl DojoModel {
                 keys.push(member.clone());
                 key_types.push(member.ty.clone());
                 key_attrs.push(format!("*self.{}", member.name.clone()));
-                serialized_keys.push(DojoSerializer::serialize_member_ty(member, true));
+                serialized_keys.push(DojoFormatter::serialize_member_ty(member, true));
             } else {
                 values.push(member.clone());
-                serialized_values.push(DojoSerializer::serialize_member_ty(member, true));
-                members_values.push(format!("pub {}: {},\n", member.name, member.ty));
+                serialized_values.push(DojoFormatter::serialize_member_ty(member, true));
+                members_values.push(DojoFormatter::get_member_declaration(&member.name, &member.ty));
 
                 if !model_member_store_impls_processed.contains(&member.ty.to_string()) {
                     model_member_store_impls.extend(vec![
@@ -175,6 +169,8 @@ impl DojoModel {
             &struct_ast.members(db).elements(db),
         )
         .to_string();
+
+        let original_struct = DojoTokenizer::rebuild_original_struct(&db, &struct_ast);
 
         let model_code = DojoModel::generate_model_code(
             &model_type,
