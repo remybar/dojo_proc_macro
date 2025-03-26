@@ -18,8 +18,8 @@ dojo-types = { path = "types" }
 
 cairo-lang-primitive-token = "1"
 
-# use the main Scarb branch while `cairo-lang-macro` 0.2.0 is deployed on crates.io
-cairo-lang-macro = { git = "https://github.com/software-mansion/scarb.git", rev = "cf2823f7ed4a36a6c58e8f2e2507d4694695b547" }
+# refer to Scarb git while `cairo-lang-macro` 0.2.0 (new api) is deployed on crates.io
+cairo-lang-macro = { version = "0.2.0", git = "https://github.com/software-mansion/scarb.git" }
 
 cairo-lang-parser = "2.11.2"
 cairo-lang-utils = "2.11.2"
