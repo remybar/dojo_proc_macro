@@ -6,4 +6,4 @@ edition = "2024_07"
 [dependencies]
 dojo_macros = { path = "../macro" }
 dojo = { path = "../dojo" }
-starknet = "2.10.1"
+starknet = "2.11.2"

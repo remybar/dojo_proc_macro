@@ -17,13 +17,15 @@ version = "1.2.2"
 dojo-types = { path = "types" }
 
 cairo-lang-primitive-token = "1"
-cairo-lang-macro = { git = "https://github.com/software-mansion/scarb.git", rev = "3433263ad8462aec7304d18b1375235ed99da7b9" }
 
-cairo-lang-parser = { git = "https://github.com/starkware-libs/cairo.git", rev = "c539d077479654eee6323d9c0c6eafad82d4851a" }
-cairo-lang-utils = { git = "https://github.com/starkware-libs/cairo.git", rev = "c539d077479654eee6323d9c0c6eafad82d4851a" }
-cairo-lang-syntax = { git = "https://github.com/starkware-libs/cairo.git", rev = "c539d077479654eee6323d9c0c6eafad82d4851a" }
-cairo-lang-defs = { git = "https://github.com/starkware-libs/cairo.git", rev = "c539d077479654eee6323d9c0c6eafad82d4851a" }
-cairo-lang-diagnostics = { git = "https://github.com/starkware-libs/cairo.git", rev = "c539d077479654eee6323d9c0c6eafad82d4851a" }
+# use the main Scarb branch while `cairo-lang-macro` 0.2.0 is deployed on crates.io
+cairo-lang-macro = { git = "https://github.com/software-mansion/scarb.git", rev = "cf2823f7ed4a36a6c58e8f2e2507d4694695b547" }
+
+cairo-lang-parser = "2.11.2"
+cairo-lang-utils = "2.11.2"
+cairo-lang-syntax = "2.11.2"
+cairo-lang-defs = "2.11.2"
+cairo-lang-diagnostics = "2.11.2"
 smol_str = "0.3"
 
 cainome = { git = "https://github.com/cartridge-gg/cainome", tag = "v0.4.12", features = [ "abigen-rs" ] }
