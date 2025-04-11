@@ -176,7 +176,8 @@ impl DojoStructIntrospect {
                             .to_string(),
                     );
                 }
-
+            }
+            else {
                 let field_name = member.name(db).text(db);
                 let field_selector = get_selector_from_name(field_name.as_ref()).unwrap();
                 let field_layout = super::layout::get_layout_from_type_clause(

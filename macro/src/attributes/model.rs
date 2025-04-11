@@ -142,9 +142,10 @@ impl DojoModel {
 
         // If Introspect or IntrospectPacked derive attribute is not set for the model,
         // use Introspect by default.
-        if !derive_attr_names.contains(&DOJO_INTROSPECT_DERIVE.to_string())
-            && !derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string())
-        {
+        if derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string()) {
+            missing_derive_attr_names.push(DOJO_PACKED_DERIVE.to_string());
+        }
+        else {
             missing_derive_attr_names.push(DOJO_INTROSPECT_DERIVE.to_string());
         }
 
@@ -158,7 +159,10 @@ impl DojoModel {
             }
         });
 
-        let model_value_derive_attr_names = model_value_derive_attr_names.join(", ");
+        let model_value_derive_attr_names = format!(
+            "#[derive({})]",
+            model_value_derive_attr_names.join(", ")
+        );
 
         let is_packed = derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string());
 
@@ -183,12 +187,18 @@ impl DojoModel {
             &unique_hash,
         );
 
-        let missing_derive_attr = DojoTokenizer::tokenize(&missing_derive_attr_names.join(", "));
+        let missing_derive_attr = if missing_derive_attr_names.is_empty() {
+            DojoTokenizer::tokenize("")
+        } else {
+            DojoTokenizer::tokenize(
+                &format!("#[derive({})]", missing_derive_attr_names.join(", "))
+            )
+        };
 
         ProcMacroResult::finalize(
             quote! {
                 // original struct with missing derive attributes
-                #[derive(#missing_derive_attr)]
+                #missing_derive_attr
                 #original_struct
 
                 // model
@@ -209,7 +219,7 @@ impl DojoModel {
         unique_hash: &String,
     ) -> TokenStream {
         let content = format!(
-        "#[derive({model_value_derive_attr_names})]
+        "{model_value_derive_attr_names}
 pub struct {model_type}Value {{
     {members_values}
 }}

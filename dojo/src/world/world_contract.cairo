@@ -280,7 +280,7 @@ pub mod world {
         self
             .resources
             .write(
-                1234,
+                metadata::resource_metadata_selector(internal_ns_hash),
                 Resource::Model(
                     (metadata::default_address(), metadata::default_class_hash().into()),
                 ),
@@ -340,10 +340,43 @@ pub mod world {
     #[abi(embed_v0)]
     impl World of IWorld<ContractState> {
         fn metadata(self: @ContractState, resource_selector: felt252) -> ResourceMetadata {
-            Default::default()
+            let (_, internal_ns_hash) = self.world_internal_namespace();
+
+            let mut values = storage::entity_model::read_model_entity(
+                metadata::resource_metadata_selector(internal_ns_hash),
+                entity_id_from_serialized_keys([resource_selector].span()),
+                Model::<ResourceMetadata>::layout(),
+            );
+
+            let mut keys = [resource_selector].span();
+
+            match Model::<ResourceMetadata>::from_serialized(keys, values) {
+                Option::Some(x) => x,
+                Option::None => panic!("Model `ResourceMetadata`: deserialization failed."),
+            }
         }
 
-        
+        fn set_metadata(ref self: ContractState, metadata: ResourceMetadata) {
+            self.assert_caller_permissions(metadata.resource_id, Permission::Owner);
+
+            let (_, internal_ns_hash) = self.world_internal_namespace();
+
+            storage::entity_model::write_model_entity(
+                metadata::resource_metadata_selector(internal_ns_hash),
+                entity_id_from_serialized_keys([metadata.resource_id].span()),
+                metadata.serialized_values(),
+                Model::<ResourceMetadata>::layout(),
+            );
+
+            self
+                .emit(
+                    MetadataUpdate {
+                        resource: metadata.resource_id,
+                        uri: metadata.metadata_uri,
+                        hash: metadata.metadata_hash,
+                    },
+                );
+        }
 
         fn is_owner(self: @ContractState, resource: felt252, address: ContractAddress) -> bool {
             self.owners.read((resource, address))
@@ -984,10 +1017,6 @@ pub mod world {
 
         fn resource(self: @ContractState, selector: felt252) -> Resource {
             self.resources.read(selector)
-        }
-        
-        fn set_metadata(ref self: dojo::world::world_contract::world::ContractState, metadata: dojo::model::metadata::ResourceMetadata) {
-            
         }
     }
 

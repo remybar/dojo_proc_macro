@@ -136,12 +136,18 @@ impl DojoEvent {
             &unique_hash,
         );
 
-        let missing_derive_attr = DojoTokenizer::tokenize(&missing_derive_attrs.join(", "));
+        let missing_derive_attr = if missing_derive_attrs.is_empty() {
+            DojoTokenizer::tokenize("")
+        } else {
+            DojoTokenizer::tokenize(
+                &format!("#[derive({})]", missing_derive_attrs.join(", "))
+            )
+        };
 
         ProcMacroResult::finalize(
             quote! {
                 // original struct with missing derive attributes
-                #[derive(#missing_derive_attr)]
+                #missing_derive_attr
                 #original_struct
 
                 // model

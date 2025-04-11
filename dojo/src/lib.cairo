@@ -15,7 +15,7 @@ pub mod event {
     pub mod component;
 
     pub mod event;
-    pub use event::{Event, EventDef, EventDefinition};
+    pub use event::{Event, EventDefinition, EventDef};
 
     pub mod interface;
     pub use interface::{IEvent, IEventDispatcher, IEventDispatcherTrait};
@@ -36,26 +36,26 @@ pub mod meta {
     pub use introspect::{Introspect, Ty, TyCompareTrait};
 
     pub mod layout;
-    pub use layout::{FieldLayout, Layout, LayoutCompareTrait};
+    pub use layout::{Layout, FieldLayout, LayoutCompareTrait};
 }
 
 pub mod model {
     pub mod component;
 
     pub mod definition;
-    pub use definition::{ModelDef, ModelDefinition, ModelIndex};
+    pub use definition::{ModelIndex, ModelDefinition, ModelDef};
 
     pub mod model;
-    pub use model::{KeyParser, Model, ModelPtr, ModelPtrsTrait};
+    pub use model::{Model, KeyParser, ModelPtr, ModelPtrsTrait};
 
     pub mod model_value;
     pub use model_value::{ModelValue, ModelValueKey};
 
-    pub mod metadata;
-    pub use metadata::ResourceMetadata;
-
     pub mod interface;
     pub use interface::{IModel, IModelDispatcher, IModelDispatcherTrait};
+
+    pub mod metadata;
+    pub use metadata::ResourceMetadata;
 
     pub mod storage;
     pub use storage::{ModelStorage, ModelStorageTest, ModelValueStorage, ModelValueStorageTest};
@@ -63,21 +63,20 @@ pub mod model {
 
 pub mod storage {
     pub mod database;
-    pub mod entity_model;
-    pub mod layout;
     pub mod packing;
+    pub mod layout;
     pub mod storage;
+    pub mod entity_model;
 }
 
 pub mod utils {
     pub mod hash;
     pub use hash::{
-        bytearray_hash, selector_from_hashes, selector_from_names,
-        selector_from_namespace_and_name,
+        bytearray_hash, selector_from_hashes, selector_from_names, selector_from_namespace_and_name,
     };
 
     pub mod key;
-    pub use key::{combine_key, entity_id_from_keys, entity_id_from_serialized_keys};
+    pub use key::{entity_id_from_serialized_keys, combine_key, entity_id_from_keys};
 
     pub mod layout;
     pub use layout::{find_field_layout, find_model_field_layout};
@@ -89,9 +88,8 @@ pub mod utils {
     pub use naming::is_name_valid;
 
     pub mod serde;
-    pub use serde::{deserialize_unwrap, serialize_inline};
+    pub use serde::{serialize_inline, deserialize_unwrap};
 }
-
 
 pub mod world {
     pub(crate) mod errors;
