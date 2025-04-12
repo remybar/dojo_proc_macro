@@ -1,4 +1,3 @@
-#[derive(Drop, Serde)]
 #[dojo::event]
 struct FooEvent {
     #[key]

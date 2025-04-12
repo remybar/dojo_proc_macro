@@ -52,6 +52,17 @@ pub fn declare_contract(name: ByteArray) -> ClassHash {
     class_hash
 }
 
+/// Declare a Dojo library.
+///
+/// # Arguments
+///   * `name` - the library contract name.
+///
+/// # Returns
+///   The declared library classhash.
+pub fn declare_library(name: ByteArray) -> ClassHash {
+    declare_contract(name)
+}
+
 /// Declare a Dojo Event contract.
 ///
 /// # Arguments

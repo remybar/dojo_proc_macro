@@ -17,6 +17,10 @@ pub use world::{
 mod tests {
     mod contract;
 
+    mod event {
+        mod event;
+    }
+
     mod expanded {
         pub(crate) mod selector_attack;
         pub(crate) mod bytearray_hash;
@@ -29,7 +33,7 @@ mod tests {
             test_contract, test_contract_with_dojo_init_args, Sword, Case, Character, Abilities,
             Stats, Weapon, Ibar, IbarDispatcher, IbarDispatcherTrait, bar, deploy_world,
             deploy_world_and_bar, deploy_world_and_foo, IFooSetter, IFooSetterDispatcher,
-            IFooSetterDispatcherTrait, NotCopiable, MyEnum
+            IFooSetterDispatcherTrait, NotCopiable, MyEnum, EnumOne, WithOptionAndEnums
         };
 
         mod event;
@@ -37,6 +41,9 @@ mod tests {
 
         mod model;
         pub use model::deploy_world_for_model_upgrades;
+
+        mod library;
+        pub use library::*;
     }
 
     mod meta {
@@ -67,5 +74,8 @@ mod tests {
         mod event;
         mod metadata;
         mod model;
+        mod namespace;
+        mod storage;
+        mod world;
     }
 }
