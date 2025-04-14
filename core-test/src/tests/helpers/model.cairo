@@ -1,11 +1,9 @@
-use starknet::ContractAddress;
-
-use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
 use dojo::meta::introspect::Introspect;
 use dojo::model::ModelIndex;
 use dojo::utils::selector_from_names;
-
-use crate::world::{spawn_test_world, NamespaceDef, TestResource};
+use dojo::world::{IWorldDispatcher, IWorldDispatcherTrait};
+use starknet::ContractAddress;
+use crate::world::{NamespaceDef, TestResource, spawn_test_world};
 use super::helpers::MyEnum;
 
 // This model is used as a base to create the "previous" version of a model to be upgraded.
@@ -39,7 +37,8 @@ struct FooModelMemberChanged {
 
 pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
     let namespace_def = NamespaceDef {
-        namespace: "dojo", resources: [
+        namespace: "dojo",
+        resources: [
             TestResource::Model("OldFooModelBadLayoutType"),
             TestResource::Model("OldFooModelMemberRemoved"),
             TestResource::Model("OldFooModelMemberAddedButRemoved"),
@@ -47,28 +46,31 @@ pub fn deploy_world_for_model_upgrades() -> IWorldDispatcher {
             TestResource::Model("OldFooModelMemberAdded"),
             TestResource::Model("OldFooModelMemberChanged"),
             TestResource::Model("OldFooModelMemberIllegalChange"),
-        ].span()
+        ]
+            .span(),
     };
     let world = spawn_test_world([namespace_def].span()).dispatcher;
 
     // write some model values to be able to check if after a successfully upgrade, these values
     // remain the same
-    
+
     // write FooModelMemberAdded { caller: 0xb0b, a: 123, b: 456 }
-    world.set_entity(
-        selector_from_names(@"dojo", @"FooModelMemberAdded"),
-        ModelIndex::Keys([0xb0b].span()),
-        [123, 456].span(),
-        Introspect::<FooModelMemberAdded>::layout()
-    );
+    world
+        .set_entity(
+            selector_from_names(@"dojo", @"FooModelMemberAdded"),
+            ModelIndex::Keys([0xb0b].span()),
+            [123, 456].span(),
+            Introspect::<FooModelMemberAdded>::layout(),
+        );
 
     // write FooModelMemberChanged { caller: 0xb0b, a: (MyEnum::X(42), 189), b: 456 }
-    world.set_entity(
-        selector_from_names(@"dojo", @"FooModelMemberChanged"),
-        ModelIndex::Keys([0xb0b].span()),
-        [0, 42, 189, 456].span(),
-        Introspect::<FooModelMemberChanged>::layout()
-    );
+    world
+        .set_entity(
+            selector_from_names(@"dojo", @"FooModelMemberChanged"),
+            ModelIndex::Keys([0xb0b].span()),
+            [0, 42, 189, 456].span(),
+            Introspect::<FooModelMemberChanged>::layout(),
+        );
 
     world
 }

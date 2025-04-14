@@ -1,6 +1,5 @@
 use dojo::model::ModelStorage;
-
-use crate::tests::helpers::{deploy_world_and_foo, Foo, NotCopiable, EnumOne, WithOptionAndEnums};
+use crate::tests::helpers::{EnumOne, Foo, NotCopiable, WithOptionAndEnums, deploy_world_and_foo};
 
 #[test]
 fn write_simple() {
@@ -48,7 +47,7 @@ fn write_multiple_copiable() {
             let foo = Foo { caller, a: felt, b: i };
             models_snaps.append(@foo);
         }
-    };
+    }
 
     world.write_models(models_snaps.span());
 
@@ -64,7 +63,7 @@ fn write_multiple_copiable() {
         assert_eq!(model.caller, caller);
         assert_eq!(model.a, felt);
         assert_eq!(model.b, i);
-    };
+    }
 
     world.erase_models(models_snaps.span());
 
@@ -95,7 +94,7 @@ fn write_multiple_not_copiable() {
             let foo = NotCopiable { caller, a: array![felt], b: "ab" };
             models_snaps.append(@foo);
         }
-    };
+    }
 
     world.write_models(models_snaps.span());
 
@@ -111,7 +110,7 @@ fn write_multiple_not_copiable() {
         assert_eq!(model.caller, caller);
         assert_eq!(model.a, array![felt]);
         assert_eq!(model.b, "ab");
-    };
+    }
 
     world.erase_models(models_snaps.span());
 

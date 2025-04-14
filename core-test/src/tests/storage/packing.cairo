@@ -1,12 +1,10 @@
 use core::array::ArrayTrait;
 use core::option::OptionTrait;
 use core::traits::{Into, TryInto};
-
-use starknet::{ContractAddress, ClassHash};
-
 use dojo::storage::packing::{
-    shl, shr, fpow, pack, unpack, pack_inner, unpack_inner, calculate_packed_size, pow2_const,
+    calculate_packed_size, fpow, pack, pack_inner, pow2_const, shl, shr, unpack, unpack_inner,
 };
+use starknet::{ClassHash, ContractAddress};
 
 #[test]
 #[available_gas(l2_gas: 9000000)]
@@ -99,7 +97,7 @@ fn test_pack_multiple() {
         }
         pack_inner(@i.into(), 32, ref packing, ref offset, ref packed);
         i += 1;
-    };
+    }
     packed.append(packing);
 
     assert(
@@ -130,7 +128,7 @@ fn test_pack_unpack_multiple() {
         pack_inner(@j.into(), 32, ref packing, ref offset, ref packed);
 
         i += 1;
-    };
+    }
     packed.append(packing);
 
     let mut unpacking: felt252 = packed.pop_front().unwrap();
@@ -171,7 +169,7 @@ fn test_pack_unpack_types() {
 
     let contract_address: ContractAddress = 3.try_into().unwrap();
     pack_inner(@contract_address.into(), 251, ref packing, ref offset, ref packed);
-    let class_hash : ClassHash = 1337.try_into().unwrap();
+    let class_hash: ClassHash = 1337.try_into().unwrap();
     pack_inner(@class_hash.into(), 251, ref packing, ref offset, ref packed);
 
     packed.append(packing);

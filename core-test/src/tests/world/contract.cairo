@@ -1,11 +1,10 @@
-use starknet::ContractAddress;
-use dojo::world::{world, IWorldDispatcherTrait};
 use dojo::contract::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 use dojo::meta::{IDeployedResourceDispatcher, IDeployedResourceDispatcherTrait};
-use snforge_std::{spy_events, EventSpyAssertionsTrait};
-
-use crate::tests::helpers::{DOJO_NSH, deploy_world};
+use dojo::world::{IWorldDispatcherTrait, world};
+use snforge_std::{EventSpyAssertionsTrait, spy_events};
+use starknet::ContractAddress;
 use crate::snf_utils;
+use crate::tests::helpers::{DOJO_NSH, deploy_world};
 
 #[starknet::contract]
 pub mod contract_invalid_upgrade {
@@ -29,8 +28,8 @@ pub trait IQuantumLeap<T> {
 
 #[starknet::contract]
 pub mod test_contract_upgrade {
-    use dojo::world::IWorldDispatcher;
     use dojo::contract::components::world_provider::IWorldProvider;
+    use dojo::world::IWorldDispatcher;
 
     #[storage]
     struct Storage {}
@@ -82,8 +81,7 @@ fn test_upgrade_from_world_not_world_provider() {
     let world = deploy_world();
     let world = world.dispatcher;
 
-    let _ = world
-        .register_contract('salt', "dojo", snf_utils::declare_contract("test_contract"));
+    let _ = world.register_contract('salt', "dojo", snf_utils::declare_contract("test_contract"));
 
     world.upgrade_contract("dojo", snf_utils::declare_contract("contract_invalid_upgrade"));
 }
@@ -177,28 +175,27 @@ fn test_deploy_contract_for_namespace_owner() {
 
     let contract_address = world.register_contract('salt1', "dojo", class_hash);
 
-    spy.assert_emitted(
-        @array![
-            (
-                world.contract_address,
-                world::Event::ContractRegistered(
-                    world::ContractRegistered {
-                        name: "test_contract",
-                        namespace: "dojo",
-                        address: contract_address,
-                        class_hash: class_hash,
-                        salt: 'salt1'
-                    }
-                )
-            )
-        ]
-    );
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    world.contract_address,
+                    world::Event::ContractRegistered(
+                        world::ContractRegistered {
+                            name: "test_contract",
+                            namespace: "dojo",
+                            address: contract_address,
+                            class_hash: class_hash,
+                            salt: 'salt1',
+                        },
+                    ),
+                ),
+            ],
+        );
 }
 
 #[test]
-#[should_panic(
-    expected: "Account `2827` does NOT have OWNER role on namespace `dojo`",
-)]
+#[should_panic(expected: "Account `2827` does NOT have OWNER role on namespace `dojo`")]
 fn test_deploy_contract_for_namespace_writer() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -215,9 +212,7 @@ fn test_deploy_contract_for_namespace_writer() {
 }
 
 #[test]
-#[should_panic(
-    expected: "Account `2827` does NOT have OWNER role on namespace `dojo`"
-)]
+#[should_panic(expected: "Account `2827` does NOT have OWNER role on namespace `dojo`")]
 fn test_deploy_contract_no_namespace_owner_access() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -236,9 +231,7 @@ fn test_deploy_contract_with_unregistered_namespace() {
     let world = world.dispatcher;
 
     world
-        .register_contract(
-            'salt1', "buzz_namespace", snf_utils::declare_contract("test_contract"),
-        );
+        .register_contract('salt1', "buzz_namespace", snf_utils::declare_contract("test_contract"));
 }
 
 // It's ENTRYPOINT_NOT_FOUND for now as in this example the contract is not a dojo contract
@@ -280,21 +273,22 @@ fn test_upgrade_contract_from_resource_owner() {
 
     world.upgrade_contract("dojo", class_hash);
 
-    spy.assert_emitted(
-        @array![
-            (
-                world.contract_address,
-                world::Event::ContractUpgraded(
-                    world::ContractUpgraded {
-                        selector: dojo::utils::selector_from_namespace_and_name(
-                            DOJO_NSH, @"test_contract"
-                        ),
-                        class_hash: class_hash,
-                    }
-                )
-            )
-        ]
-    );
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    world.contract_address,
+                    world::Event::ContractUpgraded(
+                        world::ContractUpgraded {
+                            selector: dojo::utils::selector_from_namespace_and_name(
+                                DOJO_NSH, @"test_contract",
+                            ),
+                            class_hash: class_hash,
+                        },
+                    ),
+                ),
+            ],
+        );
 }
 
 #[test]

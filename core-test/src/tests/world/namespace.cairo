@@ -1,8 +1,7 @@
-use dojo::world::{world, IWorldDispatcherTrait};
 use dojo::utils::bytearray_hash;
-use snforge_std::{spy_events, EventSpyAssertionsTrait};
+use dojo::world::{IWorldDispatcherTrait, world};
+use snforge_std::{EventSpyAssertionsTrait, spy_events};
 use starknet::ContractAddress;
-
 use crate::snf_utils;
 use crate::tests::helpers::deploy_world;
 
@@ -24,15 +23,16 @@ fn test_register_namespace() {
 
     assert(world.is_owner(hash, bob), 'namespace not registered');
 
-    spy.assert_emitted(
+    spy
+        .assert_emitted(
             @array![
                 (
                     world.contract_address,
                     world::Event::NamespaceRegistered(
-                        world::NamespaceRegistered { namespace, hash }
-                    )
-                )
-            ]
+                        world::NamespaceRegistered { namespace, hash },
+                    ),
+                ),
+            ],
         );
 }
 
@@ -70,9 +70,7 @@ fn test_register_namespace_already_registered_other_caller() {
 }
 
 #[test]
-#[should_panic(
-    expected: "Namespace `` is invalid according to Dojo naming rules: ^[a-zA-Z0-9_]+$",
-)]
+#[should_panic(expected: "Namespace `` is invalid according to Dojo naming rules: ^[a-zA-Z0-9_]+$")]
 fn test_register_namespace_empty_name() {
     let world = deploy_world();
     let world = world.dispatcher;

@@ -5,7 +5,7 @@ use cairo_lang_syntax::attribute::structured::AttributeStructurize;
 use cairo_lang_syntax::node::ast::Attribute;
 use cairo_lang_syntax::node::ast::Member as MemberAst;
 use cairo_lang_syntax::node::helpers::QueryAttrs;
-use cairo_lang_syntax::node::kind::SyntaxKind::{ExprParenthesized, ItemStruct, ItemModule};
+use cairo_lang_syntax::node::kind::SyntaxKind::{ExprParenthesized, ItemModule, ItemStruct};
 use cairo_lang_syntax::node::Terminal;
 use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
@@ -15,7 +15,6 @@ pub struct DojoParser {}
 
 /// DojoParser provides some functions to parse TokenStream/SyntaxNode.
 impl DojoParser {
-
     /// Parse an input token stream and return a ItemStruct syntax node if found.
     pub(crate) fn parse_and_find_struct(
         db: &SimpleParserDatabase,

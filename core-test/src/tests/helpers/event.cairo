@@ -1,9 +1,6 @@
+use dojo::world::IWorldDispatcher;
 use starknet::ContractAddress;
-
-use dojo::world::{IWorldDispatcher};
-
-use crate::world::{spawn_test_world, NamespaceDef, TestResource};
-
+use crate::world::{NamespaceDef, TestResource, spawn_test_world};
 use super::helpers::MyEnum;
 
 // This event is used as a base to create the "previous" version of an event to be upgraded.
@@ -26,7 +23,8 @@ struct OldFooEventMemberChanged {
 
 pub fn deploy_world_for_event_upgrades() -> IWorldDispatcher {
     let namespace_def = NamespaceDef {
-        namespace: "dojo", resources: [
+        namespace: "dojo",
+        resources: [
             TestResource::Event("OldFooEventBadLayoutType"),
             TestResource::Event("OldFooEventMemberRemoved"),
             TestResource::Event("OldFooEventMemberAddedButRemoved"),
@@ -34,7 +32,8 @@ pub fn deploy_world_for_event_upgrades() -> IWorldDispatcher {
             TestResource::Event("OldFooEventMemberAdded"),
             TestResource::Event("OldFooEventMemberChanged"),
             TestResource::Event("OldFooEventMemberIllegalChange"),
-        ].span()
+        ]
+            .span(),
     };
     spawn_test_world([namespace_def].span()).dispatcher
 }

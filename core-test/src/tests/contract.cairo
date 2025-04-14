@@ -1,6 +1,5 @@
 use dojo::contract::components::upgradeable::{IUpgradeableDispatcher, IUpgradeableDispatcherTrait};
 use dojo::world::IWorldDispatcherTrait;
-
 use crate::snf_utils;
 use crate::tests::helpers::deploy_world;
 
@@ -30,9 +29,9 @@ pub trait IQuantumLeap<T> {
 #[starknet::contract]
 pub mod test_contract_upgrade {
     use dojo::contract::IContract;
+    use dojo::contract::components::world_provider::IWorldProvider;
     use dojo::meta::IDeployedResource;
     use dojo::world::IWorldDispatcher;
-    use dojo::contract::components::world_provider::IWorldProvider;
 
     #[storage]
     struct Storage {}
@@ -88,8 +87,7 @@ fn test_upgrade_from_world_not_world_provider() {
     let world = deploy_world();
     let world = world.dispatcher;
 
-    let _ = world
-        .register_contract('salt', "dojo", snf_utils::declare_contract("test_contract"));
+    let _ = world.register_contract('salt', "dojo", snf_utils::declare_contract("test_contract"));
     let new_class_hash = snf_utils::declare_contract("contract_invalid_upgrade");
 
     world.upgrade_contract("dojo", new_class_hash);
@@ -169,9 +167,7 @@ mod invalid_model_world {
 
 #[test]
 #[available_gas(l2_gas: 6000000)]
-#[should_panic(
-    expected: "Namespace `` is invalid according to Dojo naming rules: ^[a-zA-Z0-9_]+$",
-)]
+#[should_panic(expected: "Namespace `` is invalid according to Dojo naming rules: ^[a-zA-Z0-9_]+$")]
 fn test_register_namespace_empty_name() {
     let world = deploy_world();
     let world = world.dispatcher;

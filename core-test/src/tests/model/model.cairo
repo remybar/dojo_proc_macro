@@ -1,6 +1,6 @@
-use dojo::model::{Model, ModelValue, ModelStorage, ModelValueStorage, ModelPtr};
+use dojo::model::{Model, ModelPtr, ModelStorage, ModelValue, ModelValueStorage};
 use dojo::world::WorldStorage;
-use crate::world::{spawn_test_world, NamespaceDef, TestResource};
+use crate::world::{NamespaceDef, TestResource, spawn_test_world};
 
 #[derive(Copy, Drop, Serde, Debug, PartialEq)]
 #[dojo::model]
@@ -65,9 +65,7 @@ fn namespace_def() -> NamespaceDef {
     NamespaceDef {
         namespace: "dojo_core_test",
         resources: [
-            TestResource::Model("Foo"),
-            TestResource::Model("Foo2"),
-            TestResource::Model("Foo3"),
+            TestResource::Model("Foo"), TestResource::Model("Foo2"), TestResource::Model("Foo3"),
             TestResource::Model("Foo4"),
         ]
             .span(),

@@ -1,11 +1,9 @@
 use dojo::world::IWorldDispatcherTrait;
 use starknet::ContractAddress;
-
-use crate::tests::helpers::{
-    deploy_world, IFooSetterDispatcher, IFooSetterDispatcherTrait, deploy_world_and_foo,
-};
-
 use crate::snf_utils;
+use crate::tests::helpers::{
+    IFooSetterDispatcher, IFooSetterDispatcherTrait, deploy_world, deploy_world_and_foo,
+};
 
 #[test]
 fn test_owner() {

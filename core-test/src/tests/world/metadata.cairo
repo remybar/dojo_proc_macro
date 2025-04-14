@@ -1,11 +1,9 @@
-use starknet::ContractAddress;
-use dojo::world::{world, IWorldDispatcherTrait};
 use dojo::model::{Model, ResourceMetadata};
-
-use crate::tests::helpers::{DOJO_NSH, Foo, deploy_world, deploy_world_and_foo};
+use dojo::world::{IWorldDispatcherTrait, world};
+use snforge_std::{EventSpyAssertionsTrait, spy_events};
+use starknet::ContractAddress;
 use crate::snf_utils;
-
-use snforge_std::{spy_events, EventSpyAssertionsTrait};
+use crate::tests::helpers::{DOJO_NSH, Foo, deploy_world, deploy_world_and_foo};
 
 #[test]
 fn test_set_metadata_world() {
@@ -51,20 +49,21 @@ fn test_set_metadata_resource_owner() {
     world.set_metadata(metadata.clone());
     assert(world.metadata(model_selector) == metadata, 'bad metadata');
 
-    spy.assert_emitted(
-        @array![
-            (
-                world.contract_address,
-                world::Event::MetadataUpdate(
-                    world::MetadataUpdate {
-                        resource: metadata.resource_id,
-                        uri: metadata.metadata_uri,
-                        hash: metadata.metadata_hash
-                    }
-                )
-            )
-        ]
-    );
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    world.contract_address,
+                    world::Event::MetadataUpdate(
+                        world::MetadataUpdate {
+                            resource: metadata.resource_id,
+                            uri: metadata.metadata_uri,
+                            hash: metadata.metadata_hash,
+                        },
+                    ),
+                ),
+            ],
+        );
 }
 
 #[test]
@@ -121,7 +120,7 @@ fn test_set_metadata_through_malicious_contract() {
 
     snf_utils::set_account_address(bob);
     snf_utils::set_caller_address(malicious_contract);
-    
+
     let metadata = ResourceMetadata {
         resource_id: model_selector, metadata_uri: format!("ipfs:bob"), metadata_hash: 42,
     };

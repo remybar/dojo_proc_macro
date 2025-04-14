@@ -1,4 +1,4 @@
-use dojo::utils::{entity_id_from_serialized_keys, combine_key};
+use dojo::utils::{combine_key, entity_id_from_serialized_keys};
 
 #[test]
 fn test_entity_id_from_keys() {

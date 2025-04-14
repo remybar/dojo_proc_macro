@@ -1,6 +1,5 @@
 use dojo::model::Model;
 use dojo::utils::selector_from_names;
-
 use crate::tests::helpers::DOJO_NSH;
 
 #[derive(Drop, Copy, Serde)]

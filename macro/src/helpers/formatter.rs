@@ -5,7 +5,6 @@ pub struct DojoFormatter {}
 /// DojoFormatter provides some functions to format data structure
 /// to be used in output token streams.
 impl DojoFormatter {
-
     /// Build serializing statement of a member from its description.
     pub(crate) fn serialize_member_ty(member: &Member, with_self: bool) -> String {
         format!(

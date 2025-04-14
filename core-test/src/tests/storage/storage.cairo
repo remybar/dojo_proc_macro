@@ -1,6 +1,4 @@
-use core::array::ArrayTrait;
-use core::array::SpanTrait;
-
+use core::array::{ArrayTrait, SpanTrait};
 use dojo::storage::storage;
 
 #[test]
@@ -80,7 +78,7 @@ fn test_storage_set_many_several_segments() {
         layout.append(251_u8);
 
         i += 1;
-    };
+    }
 
     storage::set_many(0, keys.span(), values.span(), 0, layout.span()).unwrap();
     let many = storage::get_many(0, keys.span(), layout.span()).unwrap();

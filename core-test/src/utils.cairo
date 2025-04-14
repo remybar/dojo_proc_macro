@@ -29,7 +29,7 @@ pub impl GasCounterImpl of GasCounterTrait {
 
         while missing.len() < missing_len {
             missing.append(@".");
-        };
+        }
         missing + str
     }
 }

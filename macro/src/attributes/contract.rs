@@ -1,6 +1,4 @@
-use cairo_lang_macro::{
-    quote, Diagnostic, ProcMacroResult, TokenStream
-};
+use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::with_db::SyntaxNodeWithDb;
 use cairo_lang_syntax::node::Terminal;
@@ -18,7 +16,7 @@ pub struct DojoContract {
     has_event: bool,
     has_storage: bool,
     has_init: bool,
-    has_constructor: bool
+    has_constructor: bool,
 }
 
 impl DojoContract {
@@ -28,7 +26,7 @@ impl DojoContract {
             has_event: false,
             has_storage: false,
             has_init: false,
-            has_constructor: false
+            has_constructor: false,
         }
     }
 
@@ -39,7 +37,7 @@ impl DojoContract {
             return DojoContract::process_ast(&db, &module_ast);
         }
 
-        ProcMacroResult::fail(format!("'dojo::contract' must be used on module only."))
+        ProcMacroResult::fail("'dojo::contract' must be used on module only.".to_string())
     }
 
     fn process_ast(db: &SimpleParserDatabase, module_ast: &ast::ItemModule) -> ProcMacroResult {
@@ -60,12 +58,12 @@ impl DojoContract {
                     match el {
                         ast::ModuleItem::Enum(ref enum_ast) => {
                             if enum_ast.name(db).text(db).to_string() == "Event" {
-                                return contract.merge_event(db, &enum_ast);
+                                return contract.merge_event(db, enum_ast);
                             }
                         }
                         ast::ModuleItem::Struct(ref struct_ast) => {
                             if struct_ast.name(db).text(db).to_string() == "Storage" {
-                                return contract.merge_storage(db, &struct_ast);
+                                return contract.merge_storage(db, struct_ast);
                             }
                         }
                         ast::ModuleItem::FreeFunction(ref fn_ast) => {
@@ -114,10 +112,10 @@ impl DojoContract {
     fn generate_contract_code(name: &String, body: Vec<TokenStream>) -> TokenStream {
         let contract_impl_name = DojoTokenizer::tokenize(&format!("{name}__ContractImpl"));
         let dojo_name = DojoTokenizer::tokenize(&format!("\"{name}\""));
-        let name = DojoTokenizer::tokenize(&name);
-        
+        let name = DojoTokenizer::tokenize(name);
+
         let mut content = TokenStream::new(vec![]);
-        content.extend(body.into_iter());
+        content.extend(body);
 
         quote! {
             #[starknet::contract]
@@ -134,7 +132,7 @@ impl DojoContract {
 
                 #[abi(embed_v0)]
                 impl WorldProviderImpl = world_provider_cpt::WorldProviderImpl<ContractState>;
-                
+
                 #[abi(embed_v0)]
                 impl UpgradeableImpl = upgradeable_cpt::UpgradeableImpl<ContractState>;
 
@@ -173,14 +171,12 @@ impl DojoContract {
     ) -> TokenStream {
         self.has_constructor = true;
 
-        if !is_valid_constructor_params(db, &fn_ast) {
-            self.diagnostics.push_error(
-                format!(
-                    "The constructor must have exactly one parameter, which is `ref self: \
+        if !is_valid_constructor_params(db, fn_ast) {
+            self.diagnostics.push_error(format!(
+                "The constructor must have exactly one parameter, which is `ref self: \
                     ContractState`. Add a `{DOJO_INIT_FN}` function instead if you need to \
                     initialize the contract with parameters."
-                )
-            );
+            ));
         }
 
         let ctor_decl = fn_ast.declaration(db).as_syntax_node();
@@ -248,7 +244,7 @@ impl DojoContract {
     fn create_init_fn(&self) -> TokenStream {
         let init_name = DojoTokenizer::tokenize(DOJO_INIT_FN);
 
-        quote!{
+        quote! {
             #[abi(per_item)]
             #[generate_trait]
             pub impl IDojoInitImpl of IDojoInit {

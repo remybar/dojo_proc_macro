@@ -1,23 +1,34 @@
-use cairo_lang_macro::{
-    quote, Diagnostic, ProcMacroResult, TokenStream,
-};
+use cairo_lang_macro::{quote, Diagnostic, ProcMacroResult, TokenStream};
 use cairo_lang_parser::utils::SimpleParserDatabase;
 use cairo_lang_syntax::node::{ast, helpers::QueryAttrs, TypedSyntaxNode};
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use crate::helpers::{
-    self, DiagnosticsExt, DojoChecker, DojoParser, DojoFormatter, DojoTokenizer, Member, ProcMacroResultExt
+    self, DiagnosticsExt, DojoChecker, DojoFormatter, DojoParser, DojoTokenizer, Member,
+    ProcMacroResultExt,
 };
 
 #[derive(Debug)]
 pub struct DojoEvent {
     diagnostics: Vec<Diagnostic>,
+    event_name: String,
+    members_values: Vec<String>,
+    serialized_keys: Vec<String>,
+    serialized_values: Vec<String>,
+    event_value_derive_attr_names: Vec<String>,
+    unique_hash: String,
 }
 
 impl DojoEvent {
     pub fn new() -> Self {
         Self {
             diagnostics: vec![],
+            event_name: String::default(),
+            members_values: vec![],
+            serialized_keys: vec![],
+            serialized_values: vec![],
+            event_value_derive_attr_names: vec![],
+            unique_hash: String::default(),
         }
     }
 
@@ -28,20 +39,20 @@ impl DojoEvent {
             return DojoEvent::process_ast(&db, &struct_ast);
         }
 
-        ProcMacroResult::fail(format!("'dojo::event' must be used on struct only."))
+        ProcMacroResult::fail("'dojo::event' must be used on struct only.".to_string())
     }
 
     fn process_ast(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> ProcMacroResult {
         let mut event = DojoEvent::new();
 
-        let event_name = struct_ast
+        event.event_name = struct_ast
             .name(db)
             .as_syntax_node()
             .get_text(db)
             .trim()
             .to_string();
 
-        if let Some(failure) = DojoChecker::is_name_valid("event", &event_name) {
+        if let Some(failure) = DojoChecker::is_name_valid("event", &event.event_name) {
             return failure;
         }
 
@@ -51,28 +62,25 @@ impl DojoEvent {
             &mut event.diagnostics,
         );
 
-        let mut serialized_keys: Vec<String> = vec![];
-        let mut serialized_values: Vec<String> = vec![];
-
         DojoEvent::serialize_keys_and_values(
             &members,
-            &mut serialized_keys,
-            &mut serialized_values,
+            &mut event.serialized_keys,
+            &mut event.serialized_values,
         );
 
-        if serialized_keys.is_empty() {
+        if event.serialized_keys.is_empty() {
             event
                 .diagnostics
                 .push_error("Event must define at least one #[key] attribute".into());
         }
 
-        if serialized_values.is_empty() {
+        if event.serialized_values.is_empty() {
             event
                 .diagnostics
                 .push_error("Event must define at least one member that is not a key".into());
         }
 
-        let members_values = members
+        event.members_values = members
             .iter()
             .filter_map(|m| {
                 if m.key {
@@ -89,7 +97,7 @@ impl DojoEvent {
             struct_ast.attributes(db).query_attr(db, "derive"),
         );
 
-        let mut event_value_derive_attr_names = derive_attr_names
+        event.event_value_derive_attr_names = derive_attr_names
             .iter()
             .map(|d| d.to_string())
             .filter(|d| d != DOJO_INTROSPECT_DERIVE && d != DOJO_PACKED_DERIVE)
@@ -113,35 +121,28 @@ impl DojoEvent {
         EXPECTED_DERIVE_ATTR_NAMES.iter().for_each(|expected_attr| {
             if !derive_attr_names.contains(&expected_attr.to_string()) {
                 missing_derive_attrs.push(expected_attr.to_string());
-                event_value_derive_attr_names.push(expected_attr.to_string());
+                event
+                    .event_value_derive_attr_names
+                    .push(expected_attr.to_string());
             }
         });
 
-        let unique_hash = helpers::compute_unique_hash(
+        event.unique_hash = helpers::compute_unique_hash(
             db,
-            &event_name,
+            &event.event_name,
             false,
             &struct_ast.members(db).elements(db),
         )
         .to_string();
 
-        let original_struct = DojoTokenizer::rebuild_original_struct(&db, &struct_ast);
+        let original_struct = DojoTokenizer::rebuild_original_struct(db, struct_ast);
 
-        let event_code = DojoEvent::generate_event_code(
-            &event_name,
-            &members_values.join("\n"),
-            &serialized_keys.join("\n"),
-            &serialized_values.join("\n"),
-            &event_value_derive_attr_names.join(", "),
-            &unique_hash,
-        );
+        let event_code = event.generate_event_code();
 
         let missing_derive_attr = if missing_derive_attrs.is_empty() {
             DojoTokenizer::tokenize("")
         } else {
-            DojoTokenizer::tokenize(
-                &format!("#[derive({})]", missing_derive_attrs.join(", "))
-            )
+            DojoTokenizer::tokenize(&format!("#[derive({})]", missing_derive_attrs.join(", ")))
         };
 
         ProcMacroResult::finalize(
@@ -153,18 +154,27 @@ impl DojoEvent {
                 // model
                 #event_code
             },
-            event.diagnostics
+            event.diagnostics,
         )
     }
 
-    fn generate_event_code(
-        type_name: &String,
-        members_values: &String,
-        serialized_keys: &String,
-        serialized_values: &String,
-        event_value_derive_attr_names: &String,
-        unique_hash: &String,
-    ) -> TokenStream {
+    fn generate_event_code(&self) -> TokenStream {
+        let (
+            type_name,
+            members_values,
+            serialized_keys,
+            serialized_values,
+            event_value_derive_attr_names,
+            unique_hash,
+        ) = (
+            &self.event_name,
+            self.members_values.join("\n"),
+            self.serialized_keys.join("\n"),
+            self.serialized_values.join("\n"),
+            self.event_value_derive_attr_names.join(", "),
+            &self.unique_hash,
+        );
+
         let content = format!(
         "// EventValue on it's own does nothing since events are always emitted and
 // never read from the storage. However, it's required by the ABI to

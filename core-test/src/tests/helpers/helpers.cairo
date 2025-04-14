@@ -1,10 +1,8 @@
-use starknet::{ContractAddress};
-
-use dojo::world::{IWorldDispatcher, WorldStorage, WorldStorageTrait};
 use dojo::model::Model;
-
+use dojo::world::{IWorldDispatcher, WorldStorage, WorldStorageTrait};
+use starknet::ContractAddress;
 use crate::world::{
-    spawn_test_world, NamespaceDef, TestResource, ContractDefTrait, WorldStorageTestTrait
+    ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait, spawn_test_world,
 };
 
 pub const DOJO_NSH: felt252 = 0x309e09669bc1fdc1dd6563a7ef862aa6227c97d099d08cc7b81bad58a7443fa;
@@ -110,8 +108,8 @@ pub trait IFooSetter<T> {
 
 #[dojo::contract]
 pub mod foo_setter {
-    use super::{Foo, IFooSetter};
     use dojo::model::ModelStorage;
+    use super::{Foo, IFooSetter};
 
     #[abi(embed_v0)]
     impl IFooSetterImpl of IFooSetter<ContractState> {
@@ -194,10 +192,11 @@ pub struct Stats {
     pub romances: u16,
 }
 
+// IntrospectPacked requires same arms
 #[derive(IntrospectPacked, Copy, Drop, Serde)]
 pub enum Weapon {
     DualWield: (Sword, Sword),
-    Fists: (Sword, Sword), // Introspect requires same arms
+    Fists: (Sword, Sword),
 }
 
 #[starknet::interface]
@@ -209,9 +208,8 @@ pub trait Ibar<TContractState> {
 #[dojo::contract]
 pub mod bar {
     use core::traits::Into;
-    use starknet::{get_caller_address};
-    use dojo::model::{ModelStorage, ModelPtr};
-
+    use dojo::model::{ModelPtr, ModelStorage};
+    use starknet::get_caller_address;
     use super::{Foo, IWorldDispatcher};
 
     #[storage]
@@ -229,7 +227,7 @@ pub mod bar {
         fn delete_foo(self: @ContractState) {
             let mut world = self.world(@"dojo");
             let ptr = ModelPtr::<
-                Foo
+                Foo,
             > { id: core::poseidon::poseidon_hash_span([get_caller_address().into()].span()) };
             world.erase_model_ptr(ptr);
         }
@@ -244,7 +242,7 @@ pub mod malicious_contract {
 
 /// Deploys an empty world with the `dojo` namespace.
 pub fn deploy_world() -> WorldStorage {
-    let namespace_def = NamespaceDef { namespace: "dojo", resources: [].span(), };
+    let namespace_def = NamespaceDef { namespace: "dojo", resources: [].span() };
 
     spawn_test_world([namespace_def].span())
 }
@@ -253,9 +251,8 @@ pub fn deploy_world() -> WorldStorage {
 /// No permissions are granted.
 pub fn deploy_world_and_foo() -> (WorldStorage, felt252) {
     let namespace_def = NamespaceDef {
-        namespace: "dojo", resources: [
-            TestResource::Model("Foo"), TestResource::Model("NotCopiable"),
-        ].span(),
+        namespace: "dojo",
+        resources: [TestResource::Model("Foo"), TestResource::Model("NotCopiable")].span(),
     };
 
     (spawn_test_world([namespace_def].span()), Model::<Foo>::selector(DOJO_NSH))
@@ -265,9 +262,8 @@ pub fn deploy_world_and_foo() -> (WorldStorage, felt252) {
 /// Grants the `bar` contract writer permissions to the `foo` model.
 pub fn deploy_world_and_bar() -> (WorldStorage, IbarDispatcher) {
     let namespace_def = NamespaceDef {
-        namespace: "dojo", resources: [
-            TestResource::Model("Foo"), TestResource::Contract("bar"),
-        ].span(),
+        namespace: "dojo",
+        resources: [TestResource::Model("Foo"), TestResource::Contract("bar")].span(),
     };
 
     let bar_def = ContractDefTrait::new(@"dojo", @"bar")

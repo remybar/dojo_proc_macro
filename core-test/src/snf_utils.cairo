@@ -1,6 +1,6 @@
-use starknet::{ClassHash, ContractAddress};
-use snforge_std::{ContractClassTrait, DeclareResultTrait};
 use snforge_std::cheatcodes::contract_class::ContractClass;
+use snforge_std::{ContractClassTrait, DeclareResultTrait};
+use starknet::{ClassHash, ContractAddress};
 
 /// Declare a contract.
 ///

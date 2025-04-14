@@ -6,7 +6,6 @@ pub struct DojoTokenizer {}
 
 /// DojoTokenizer provides some functions to build TokenStream or TokenTree.
 impl DojoTokenizer {
-
     /// Convert a string into a TokenTree to be used in `quote!` macro.
     pub fn tokenize(s: &str) -> TokenTree {
         TokenTree::Ident(Token::new(s, TextSpan::call_site()))

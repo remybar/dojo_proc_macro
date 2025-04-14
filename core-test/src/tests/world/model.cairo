@@ -1,15 +1,9 @@
-use dojo::model::ModelStorage;
+use dojo::model::{Model, ModelStorage};
+use dojo::world::{IWorldDispatcherTrait, world};
+use snforge_std::{EventSpyTrait, EventsFilterTrait, spy_events};
 use starknet::ContractAddress;
-
-use crate::tests::helpers::{
-    Foo, DOJO_NSH, deploy_world, deploy_world_for_model_upgrades, MyEnum
-};
-use dojo::world::{world, IWorldDispatcherTrait};
-use dojo::model::Model;
-
-use snforge_std::{spy_events, EventSpyTrait, EventsFilterTrait};
-
 use crate::snf_utils;
+use crate::tests::helpers::{DOJO_NSH, Foo, MyEnum, deploy_world, deploy_world_for_model_upgrades};
 
 #[dojo::model]
 pub struct FooModelBadLayoutType {
@@ -78,7 +72,7 @@ fn test_register_model_for_namespace_owner() {
 
     world.grant_owner(DOJO_NSH, bob);
 
-let mut spy = spy_events();
+    let mut spy = spy_events();
 
     snf_utils::set_account_address(bob);
     snf_utils::set_caller_address(bob);
@@ -120,9 +114,7 @@ fn test_register_model_with_invalid_name() {
 }
 
 #[test]
-#[should_panic(
-    expected: "Account `2827` does NOT have OWNER role on namespace `dojo`",
-)]
+#[should_panic(expected: "Account `2827` does NOT have OWNER role on namespace `dojo`")]
 fn test_register_model_for_namespace_writer() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
 
@@ -133,7 +125,7 @@ fn test_register_model_for_namespace_writer() {
 
     snf_utils::set_account_address(bob);
     snf_utils::set_caller_address(bob);
-    
+
     world.register_model("dojo", snf_utils::declare_model_contract("Foo"));
 }
 
@@ -152,7 +144,7 @@ fn test_upgrade_model_from_model_owner() {
     let class_hash = snf_utils::declare_model_contract("FooModelMemberAdded");
     world.upgrade_model("dojo", class_hash);
 
-// parse the event manually because we don't know the value of
+    // parse the event manually because we don't know the value of
     // the 'address' field of the emitted event to assert a full event.
     let events = spy.get_events().emitted_by(world.contract_address);
 
@@ -176,7 +168,7 @@ fn test_upgrade_model() {
 
     let world = deploy_world_for_model_upgrades();
     let mut world_storage = dojo::world::WorldStorageTrait::new(world, @"dojo");
-    
+
     let mut spy = spy_events();
 
     let class_hash = snf_utils::declare_model_contract("FooModelMemberAdded");
@@ -221,7 +213,9 @@ fn test_upgrade_model_with_member_changed() {
     let (_, event) = events.events.at(0);
 
     assert(event.keys.at(0) == @selector!("ModelUpgraded"), 'Wrong event name');
-    assert(event.keys.at(1) == @Model::<FooModelMemberChanged>::selector(DOJO_NSH), 'Wrong selector');
+    assert(
+        event.keys.at(1) == @Model::<FooModelMemberChanged>::selector(DOJO_NSH), 'Wrong selector',
+    );
     assert(event.data.at(0) == @class_hash.into(), 'Wrong class hash');
 
     // values previously set in deploy_world_for_model_upgrades
@@ -231,18 +225,14 @@ fn test_upgrade_model_with_member_changed() {
 }
 
 #[test]
-#[should_panic(
-    expected: "Invalid new layout to upgrade the resource `dojo-FooModelBadLayoutType`",
-)]
+#[should_panic(expected: "Invalid new layout to upgrade the resource `dojo-FooModelBadLayoutType`")]
 fn test_upgrade_model_with_bad_layout_type() {
     let world = deploy_world_for_model_upgrades();
     world.upgrade_model("dojo", snf_utils::declare_model_contract("FooModelBadLayoutType"));
 }
 
 #[test]
-#[should_panic(
-    expected: "Invalid new schema to upgrade the resource `dojo-FooModelMemberRemoved`",
-)]
+#[should_panic(expected: "Invalid new schema to upgrade the resource `dojo-FooModelMemberRemoved`")]
 fn test_upgrade_model_with_member_removed() {
     let world = deploy_world_for_model_upgrades();
     world.upgrade_model("dojo", snf_utils::declare_model_contract("FooModelMemberRemoved"));
@@ -254,10 +244,7 @@ fn test_upgrade_model_with_member_removed() {
 )]
 fn test_upgrade_model_with_member_added_but_removed() {
     let world = deploy_world_for_model_upgrades();
-    world
-        .upgrade_model(
-            "dojo", snf_utils::declare_model_contract("FooModelMemberAddedButRemoved"),
-        );
+    world.upgrade_model("dojo", snf_utils::declare_model_contract("FooModelMemberAddedButRemoved"));
 }
 
 #[test]
@@ -296,9 +283,7 @@ fn test_upgrade_model_from_model_writer() {
 }
 
 #[test]
-#[should_panic(
-    expected: "Resource (Model) `dojo-Foo` is already registered",
-)]
+#[should_panic(expected: "Resource (Model) `dojo-Foo` is already registered")]
 fn test_upgrade_model_from_random_account() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
     let alice: ContractAddress = 0xa11ce.try_into().unwrap();

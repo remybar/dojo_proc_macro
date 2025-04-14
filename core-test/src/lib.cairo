@@ -1,16 +1,15 @@
 #[cfg(target: "test")]
-mod utils;
-#[cfg(target: "test")]
 mod snf_utils;
 #[cfg(target: "test")]
-mod world;
-
+mod utils;
 #[cfg(target: "test")]
-pub use utils::{GasCounter, assert_array, GasCounterTrait};
+mod world;
+#[cfg(target: "test")]
+pub use utils::{GasCounter, GasCounterTrait, assert_array};
 #[cfg(target: "test")]
 pub use world::{
-    deploy_contract, deploy_with_world_address, spawn_test_world, NamespaceDef, TestResource,
-    ContractDef, ContractDefTrait, WorldStorageTestTrait,
+    ContractDef, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait,
+    deploy_contract, deploy_with_world_address, spawn_test_world,
 };
 
 #[cfg(test)]
@@ -22,22 +21,22 @@ mod tests {
     }
 
     mod expanded {
-        pub(crate) mod selector_attack;
         pub(crate) mod bytearray_hash;
+        pub(crate) mod selector_attack;
     }
 
     mod helpers {
         mod helpers;
         pub use helpers::{
-            DOJO_NSH, SimpleEvent, e_SimpleEvent, Foo, m_Foo, m_FooInvalidName, foo_setter,
-            test_contract, test_contract_with_dojo_init_args, Sword, Case, Character, Abilities,
-            Stats, Weapon, Ibar, IbarDispatcher, IbarDispatcherTrait, bar, deploy_world,
-            deploy_world_and_bar, deploy_world_and_foo, IFooSetter, IFooSetterDispatcher,
-            IFooSetterDispatcherTrait, NotCopiable, MyEnum, EnumOne, WithOptionAndEnums
+            Abilities, Case, Character, DOJO_NSH, EnumOne, Foo, IFooSetter, IFooSetterDispatcher,
+            IFooSetterDispatcherTrait, Ibar, IbarDispatcher, IbarDispatcherTrait, MyEnum,
+            NotCopiable, SimpleEvent, Stats, Sword, Weapon, WithOptionAndEnums, bar, deploy_world,
+            deploy_world_and_bar, deploy_world_and_foo, e_SimpleEvent, foo_setter, m_Foo,
+            m_FooInvalidName, test_contract, test_contract_with_dojo_init_args,
         };
 
         mod event;
-        pub use event::{deploy_world_for_event_upgrades};
+        pub use event::deploy_world_for_event_upgrades;
 
         mod model;
         pub use model::deploy_world_for_model_upgrades;
@@ -60,7 +59,7 @@ mod tests {
         mod storage;
     }
 
-        mod utils {
+    mod utils {
         mod hash;
         mod key;
         mod layout;

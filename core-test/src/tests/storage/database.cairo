@@ -1,5 +1,4 @@
 use core::array::{ArrayTrait, SpanTrait};
-
 use dojo::storage::database::{get, set};
 
 #[test]

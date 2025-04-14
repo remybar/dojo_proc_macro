@@ -1,11 +1,11 @@
-use starknet::ContractAddress;
-
-use crate::tests::helpers::{DOJO_NSH, deploy_world, deploy_world_for_event_upgrades, SimpleEvent, MyEnum};
-use dojo::world::{world, IWorldDispatcherTrait};
 use dojo::event::Event;
-use snforge_std::{spy_events, EventSpyTrait, EventsFilterTrait};
-
+use dojo::world::{IWorldDispatcherTrait, world};
+use snforge_std::{EventSpyTrait, EventsFilterTrait, spy_events};
+use starknet::ContractAddress;
 use crate::snf_utils;
+use crate::tests::helpers::{
+    DOJO_NSH, MyEnum, SimpleEvent, deploy_world, deploy_world_for_event_upgrades,
+};
 
 #[dojo::event]
 pub struct FooEventBadLayoutType {
@@ -104,9 +104,7 @@ fn test_register_event_for_namespace_owner() {
 }
 
 #[test]
-#[should_panic(
-    expected: "Account `2827` does NOT have OWNER role on namespace `dojo`"
-)]
+#[should_panic(expected: "Account `2827` does NOT have OWNER role on namespace `dojo`")]
 fn test_register_event_for_namespace_writer() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
 
@@ -146,7 +144,7 @@ fn test_upgrade_event_from_event_owner() {
 
     assert(event.keys.at(0) == @selector!("EventUpgraded"), 'Wrong event name');
     assert(
-        event.keys.at(1) == @Event::<FooEventMemberAdded>::selector(DOJO_NSH), 'bad model selector'
+        event.keys.at(1) == @Event::<FooEventMemberAdded>::selector(DOJO_NSH), 'bad model selector',
     );
     assert(event.data.at(0) == @class_hash.into(), 'Wrong class hash');
 
@@ -175,10 +173,9 @@ fn test_upgrade_event() {
 
     assert(event.keys.at(0) == @selector!("EventUpgraded"), 'Wrong event name');
     assert(
-        event.keys.at(1) == @Event::<FooEventMemberAdded>::selector(DOJO_NSH), 'bad model selector'
+        event.keys.at(1) == @Event::<FooEventMemberAdded>::selector(DOJO_NSH), 'bad model selector',
     );
     assert(event.data.at(0) == @class_hash.into(), 'Wrong class hash');
-
 }
 
 #[test]
@@ -200,24 +197,21 @@ fn test_upgrade_event_with_member_changed() {
 
     assert(event.keys.at(0) == @selector!("EventUpgraded"), 'Wrong event name');
     assert(
-        event.keys.at(1) == @Event::<FooEventMemberChanged>::selector(DOJO_NSH), 'bad model selector'
+        event.keys.at(1) == @Event::<FooEventMemberChanged>::selector(DOJO_NSH),
+        'bad model selector',
     );
     assert(event.data.at(0) == @class_hash.into(), 'Wrong class hash');
 }
 
 #[test]
-#[should_panic(
-    expected: "Invalid new layout to upgrade the resource `dojo-FooEventBadLayoutType`",
-)]
+#[should_panic(expected: "Invalid new layout to upgrade the resource `dojo-FooEventBadLayoutType`")]
 fn test_upgrade_event_with_bad_layout_type() {
     let world = deploy_world_for_event_upgrades();
     world.upgrade_event("dojo", snf_utils::declare_event_contract("FooEventBadLayoutType"));
 }
 
 #[test]
-#[should_panic(
-    expected: "Invalid new schema to upgrade the resource `dojo-FooEventMemberRemoved`",
-)]
+#[should_panic(expected: "Invalid new schema to upgrade the resource `dojo-FooEventMemberRemoved`")]
 fn test_upgrade_event_with_member_removed() {
     let world = deploy_world_for_event_upgrades();
     world.upgrade_event("dojo", snf_utils::declare_event_contract("FooEventMemberRemoved"));
@@ -229,10 +223,7 @@ fn test_upgrade_event_with_member_removed() {
 )]
 fn test_upgrade_event_with_member_added_but_removed() {
     let world = deploy_world_for_event_upgrades();
-    world
-        .upgrade_event(
-            "dojo", snf_utils::declare_event_contract("FooEventMemberAddedButRemoved"),
-        );
+    world.upgrade_event("dojo", snf_utils::declare_event_contract("FooEventMemberAddedButRemoved"));
 }
 
 #[test]
@@ -271,9 +262,7 @@ fn test_upgrade_event_from_event_writer() {
 }
 
 #[test]
-#[should_panic(
-    expected: "Resource (Event) `dojo-SimpleEvent` is already registered"
-)]
+#[should_panic(expected: "Resource (Event) `dojo-SimpleEvent` is already registered")]
 fn test_upgrade_event_from_random_account() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
     let alice: ContractAddress = 0xa11ce.try_into().unwrap();

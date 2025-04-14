@@ -16,7 +16,7 @@ pub struct DojoLibrary {
     has_event: bool,
     has_storage: bool,
     has_init: bool,
-    has_constructor: bool
+    has_constructor: bool,
 }
 
 impl DojoLibrary {
@@ -26,7 +26,7 @@ impl DojoLibrary {
             has_event: false,
             has_storage: false,
             has_init: false,
-            has_constructor: false
+            has_constructor: false,
         }
     }
 
@@ -37,7 +37,7 @@ impl DojoLibrary {
             return DojoLibrary::process_ast(&db, &module_ast);
         }
 
-        ProcMacroResult::fail(format!("'dojo::library' must be used on module only."))
+        ProcMacroResult::fail("'dojo::library' must be used on module only.".to_string())
     }
 
     fn process_ast(db: &SimpleParserDatabase, module_ast: &ast::ItemModule) -> ProcMacroResult {
@@ -57,34 +57,34 @@ impl DojoLibrary {
                 .map(|el| {
                     match el {
                         ast::ModuleItem::Enum(ref enum_ast) => {
-                        if enum_ast.name(db).text(db).to_string() == "Event" {
-                            return library.merge_event(db, enum_ast.clone());
+                            if enum_ast.name(db).text(db).to_string() == "Event" {
+                                return library.merge_event(db, enum_ast.clone());
+                            }
                         }
-                    },
-                    ast::ModuleItem::Struct(ref struct_ast) => {
-                        if struct_ast.name(db).text(db).to_string() == "Storage" {
-                            return library.merge_storage(db, struct_ast.clone());
+                        ast::ModuleItem::Struct(ref struct_ast) => {
+                            if struct_ast.name(db).text(db).to_string() == "Storage" {
+                                return library.merge_storage(db, struct_ast.clone());
+                            }
                         }
-                    },
-                    ast::ModuleItem::FreeFunction(ref fn_ast) => {
-                        let fn_name = fn_ast.declaration(db).name(db).text(db);
+                        ast::ModuleItem::FreeFunction(ref fn_ast) => {
+                            let fn_name = fn_ast.declaration(db).name(db).text(db);
 
-                        if fn_name == CONSTRUCTOR_FN {
-                            library.has_constructor = true;
-                        }
+                            if fn_name == CONSTRUCTOR_FN {
+                                library.has_constructor = true;
+                            }
 
-                        if fn_name == DOJO_INIT_FN {
-                            library.has_init = true;
+                            if fn_name == DOJO_INIT_FN {
+                                library.has_init = true;
+                            }
                         }
-                    },
-                    _ => {}
-                };
+                        _ => {}
+                    };
 
-                let el = el.as_syntax_node();
-                let el = SyntaxNodeWithDb::new(&el, db);
-                quote! { #el }
-            })
-            .collect::<Vec<TokenStream>>();
+                    let el = el.as_syntax_node();
+                    let el = SyntaxNodeWithDb::new(&el, db);
+                    quote! { #el }
+                })
+                .collect::<Vec<TokenStream>>();
 
             if library.has_constructor {
                 return ProcMacroResult::fail(format!(
@@ -116,10 +116,10 @@ impl DojoLibrary {
     fn generate_library_code(name: &String, body: Vec<TokenStream>) -> TokenStream {
         let library_impl_name = DojoTokenizer::tokenize(&format!("{name}__LibraryImpl"));
         let dojo_name = DojoTokenizer::tokenize(&format!("\"{name}\""));
-        let name = DojoTokenizer::tokenize(&name);
+        let name = DojoTokenizer::tokenize(name);
 
         let mut content = TokenStream::new(vec![]);
-        content.extend(body.into_iter());
+        content.extend(body);
 
         quote! {
             #[starknet::contract]
@@ -129,10 +129,10 @@ impl DojoLibrary {
                 use dojo::meta::IDeployedResource;
 
                 component!(path: world_provider_cpt, storage: world_provider, event: WorldProviderEvent);
-            
+
                 #[abi(embed_v0)]
                 impl WorldProviderImpl = world_provider_cpt::WorldProviderImpl<ContractState>;
-   
+
                 #[abi(embed_v0)]
                 pub impl #library_impl_name of ILibrary<ContractState> {}
 

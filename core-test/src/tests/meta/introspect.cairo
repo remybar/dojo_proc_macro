@@ -1,5 +1,5 @@
-use dojo::meta::introspect::{Introspect, Struct, Enum, Member, Ty, TyCompareTrait};
-use dojo::meta::{Layout, FieldLayout};
+use dojo::meta::introspect::{Enum, Introspect, Member, Struct, Ty, TyCompareTrait};
+use dojo::meta::{FieldLayout, Layout};
 use crate::utils::GasCounterTrait;
 
 #[derive(Drop, Introspect)]
@@ -140,7 +140,7 @@ fn _enum(values: Array<Option<Layout>>) -> Layout {
         }
 
         i += 1;
-    };
+    }
 
     Layout::Enum(items.span())
 }
@@ -436,7 +436,7 @@ fn test_primitive_upgrade_backward_compatibility() {
 
 #[test]
 #[should_panic(
-    expected: "The introspection of the primitive type 33053979968501614 is not supported."
+    expected: "The introspection of the primitive type 33053979968501614 is not supported.",
 )]
 fn test_unknown_primitive() {
     let _ = Ty::Primitive('unknown').is_an_upgrade_of(@Ty::Primitive('u8'));
@@ -444,7 +444,7 @@ fn test_unknown_primitive() {
 
 #[test]
 #[should_panic(
-    expected: "Prefer using u32 instead of usize as usize size is architecture-dependent."
+    expected: "Prefer using u32 instead of usize as usize size is architecture-dependent.",
 )]
 fn test_usize_primitive() {
     let _ = Ty::Primitive('usize').is_an_upgrade_of(@Ty::Primitive('u8'));

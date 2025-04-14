@@ -7,18 +7,35 @@ use cairo_lang_syntax::node::{ast, TypedSyntaxNode};
 
 use crate::constants::{DOJO_INTROSPECT_DERIVE, DOJO_PACKED_DERIVE, EXPECTED_DERIVE_ATTR_NAMES};
 use crate::helpers::{
-    self, DiagnosticsExt, DojoChecker, DojoParser, DojoFormatter, DojoTokenizer, Member, ProcMacroResultExt
+    self, DiagnosticsExt, DojoChecker, DojoFormatter, DojoParser, DojoTokenizer, Member,
+    ProcMacroResultExt,
 };
 
 #[derive(Debug)]
 pub struct DojoModel {
     diagnostics: Vec<Diagnostic>,
+    model_type: String,
+    model_value_derive_attr_names: Vec<String>,
+    members_values: Vec<String>,
+    key_type: String,
+    keys_to_tuple: String,
+    serialized_keys: Vec<String>,
+    serialized_values: Vec<String>,
+    unique_hash: String,
 }
 
 impl DojoModel {
     pub fn new() -> Self {
         Self {
             diagnostics: vec![],
+            model_type: String::default(),
+            model_value_derive_attr_names: vec![],
+            members_values: vec![],
+            key_type: String::default(),
+            keys_to_tuple: String::default(),
+            serialized_keys: vec![],
+            serialized_values: vec![],
+            unique_hash: String::default(),
         }
     }
     pub fn process(token_stream: TokenStream) -> ProcMacroResult {
@@ -28,31 +45,27 @@ impl DojoModel {
             return DojoModel::process_ast(&db, &struct_ast);
         }
 
-        ProcMacroResult::fail(format!("'dojo::model' must be used on struct only."))
+        ProcMacroResult::fail("'dojo::model' must be used on struct only.".to_string())
     }
 
     fn process_ast(db: &SimpleParserDatabase, struct_ast: &ast::ItemStruct) -> ProcMacroResult {
         let mut model = DojoModel::new();
 
-        let model_type = struct_ast
+        model.model_type = struct_ast
             .name(db)
             .as_syntax_node()
             .get_text(db)
             .trim()
             .to_string();
 
-        if let Some(failure) = DojoChecker::is_name_valid("model", &model_type) {
+        if let Some(failure) = DojoChecker::is_name_valid("model", &model.model_type) {
             return failure;
         }
 
         let mut values: Vec<Member> = vec![];
         let mut keys: Vec<Member> = vec![];
-        let mut members_values: Vec<String> = vec![];
         let mut key_types: Vec<String> = vec![];
         let mut key_attrs: Vec<String> = vec![];
-
-        let mut serialized_keys: Vec<String> = vec![];
-        let mut serialized_values: Vec<String> = vec![];
 
         // The impl constraint for a model `MemberStore` must be defined for each member type.
         // To avoid double, we keep track of the processed types to skip the double impls.
@@ -70,25 +83,34 @@ impl DojoModel {
                 keys.push(member.clone());
                 key_types.push(member.ty.clone());
                 key_attrs.push(format!("*self.{}", member.name.clone()));
-                serialized_keys.push(DojoFormatter::serialize_member_ty(member, true));
+                model
+                    .serialized_keys
+                    .push(DojoFormatter::serialize_member_ty(member, true));
             } else {
                 values.push(member.clone());
-                serialized_values.push(DojoFormatter::serialize_member_ty(member, true));
-                members_values.push(DojoFormatter::get_member_declaration(&member.name, &member.ty));
+                model
+                    .serialized_values
+                    .push(DojoFormatter::serialize_member_ty(member, true));
+                model
+                    .members_values
+                    .push(DojoFormatter::get_member_declaration(
+                        &member.name,
+                        &member.ty,
+                    ));
 
                 if !model_member_store_impls_processed.contains(&member.ty.to_string()) {
                     model_member_store_impls.extend(vec![
                         format!(
                             "+dojo::model::storage::MemberModelStorage<S, {}, {}>",
-                            model_type, member.ty
+                            model.model_type, member.ty
                         ),
                         format!(
                             "+dojo::model::storage::MemberModelStorage<S, {}Value, {}>",
-                            model_type, member.ty
+                            model.model_type, member.ty
                         ),
                         format!(
                             "+dojo::model::members::MemberStore::<S, {}Value, {}>",
-                            model_type, member.ty
+                            model.model_type, member.ty
                         ),
                     ]);
 
@@ -113,7 +135,7 @@ impl DojoModel {
             return ProcMacroResult::fail_with_diagnostics(model.diagnostics);
         }
 
-        let (keys_to_tuple, key_type) = if keys.len() > 1 {
+        (model.keys_to_tuple, model.key_type) = if keys.len() > 1 {
             (
                 format!("({})", key_attrs.join(", ")),
                 format!("({})", key_types.join(", ")),
@@ -132,7 +154,7 @@ impl DojoModel {
         );
 
         // Build the list of derive attributes to set on "ModelValue" struct.
-        let mut model_value_derive_attr_names = derive_attr_names
+        model.model_value_derive_attr_names = derive_attr_names
             .iter()
             .map(|d| d.to_string())
             .filter(|d| d != DOJO_INTROSPECT_DERIVE && d != DOJO_PACKED_DERIVE)
@@ -144,8 +166,7 @@ impl DojoModel {
         // use Introspect by default.
         if derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string()) {
             missing_derive_attr_names.push(DOJO_PACKED_DERIVE.to_string());
-        }
-        else {
+        } else {
             missing_derive_attr_names.push(DOJO_INTROSPECT_DERIVE.to_string());
         }
 
@@ -155,44 +176,31 @@ impl DojoModel {
 
             if !derive_attr_names.contains(&attr) {
                 missing_derive_attr_names.push(attr.clone());
-                model_value_derive_attr_names.push(attr);
+                model.model_value_derive_attr_names.push(attr);
             }
         });
 
-        let model_value_derive_attr_names = format!(
-            "#[derive({})]",
-            model_value_derive_attr_names.join(", ")
-        );
-
         let is_packed = derive_attr_names.contains(&DOJO_PACKED_DERIVE.to_string());
 
-        let unique_hash = helpers::compute_unique_hash(
+        model.unique_hash = helpers::compute_unique_hash(
             db,
-            &model_type,
+            &model.model_type,
             is_packed,
             &struct_ast.members(db).elements(db),
         )
         .to_string();
 
-        let original_struct = DojoTokenizer::rebuild_original_struct(&db, &struct_ast);
+        let model_code = model.generate_model_code();
 
-        let model_code = DojoModel::generate_model_code(
-            &model_type,
-            &model_value_derive_attr_names,
-            &members_values.join(""),
-            &key_type,
-            &keys_to_tuple,
-            &serialized_keys.join(""),
-            &serialized_values.join(""),
-            &unique_hash,
-        );
+        let original_struct = DojoTokenizer::rebuild_original_struct(db, struct_ast);
 
         let missing_derive_attr = if missing_derive_attr_names.is_empty() {
             DojoTokenizer::tokenize("")
         } else {
-            DojoTokenizer::tokenize(
-                &format!("#[derive({})]", missing_derive_attr_names.join(", "))
-            )
+            DojoTokenizer::tokenize(&format!(
+                "#[derive({})]",
+                missing_derive_attr_names.join(", ")
+            ))
         };
 
         ProcMacroResult::finalize(
@@ -208,16 +216,30 @@ impl DojoModel {
         )
     }
 
-    fn generate_model_code(
-        model_type: &String,
-        model_value_derive_attr_names: &String,
-        members_values: &String,
-        key_type: &String,
-        keys_to_tuple: &String,
-        serialized_keys: &String,
-        serialized_values: &String,
-        unique_hash: &String,
-    ) -> TokenStream {
+    fn generate_model_code(&self) -> TokenStream {
+        let (
+            model_type,
+            model_value_derive_attr_names,
+            members_values,
+            key_type,
+            keys_to_tuple,
+            serialized_keys,
+            serialized_values,
+            unique_hash,
+        ) = (
+            &self.model_type,
+            format!(
+                "#[derive({})]",
+                self.model_value_derive_attr_names.join(", ")
+            ),
+            self.members_values.join(""),
+            &self.key_type,
+            &self.keys_to_tuple,
+            self.serialized_keys.join(""),
+            self.serialized_values.join(""),
+            &self.unique_hash,
+        );
+
         let content = format!(
         "{model_value_derive_attr_names}
 pub struct {model_type}Value {{
@@ -337,6 +359,7 @@ pub mod m_{model_type} {{
     }}
 }}"
     );
+
         TokenStream::new(vec![DojoTokenizer::tokenize(&content)])
     }
 }

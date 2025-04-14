@@ -1,23 +1,20 @@
-use dojo::world::Resource;
+use dojo::event::{Event, EventStorage};
+use dojo::model::ModelStorage;
 use dojo::utils::bytearray_hash;
 use dojo::world::{
-    world as world_contract, IWorldDispatcher, IWorldDispatcherTrait, IUpgradeableWorldDispatcher,
-    IUpgradeableWorldDispatcherTrait, WorldStorageTrait,
+    IUpgradeableWorldDispatcher, IUpgradeableWorldDispatcherTrait, IWorldDispatcher,
+    IWorldDispatcherTrait, Resource, WorldStorageTrait, world as world_contract,
 };
-use dojo::model::ModelStorage;
-use dojo::event::{Event, EventStorage};
-
+use snforge_std::{EventSpyAssertionsTrait, spy_events};
 use starknet::ContractAddress;
-
 use crate::tests::helpers::{
-    IbarDispatcherTrait, deploy_world_and_bar, Foo,
-    SimpleEvent, deploy_world,
-    LibraryALibraryDispatcher, LibraryADispatcherTrait,
+    Foo, IbarDispatcherTrait, LibraryADispatcherTrait, LibraryALibraryDispatcher, SimpleEvent,
+    deploy_world, deploy_world_and_bar,
 };
-use crate::{spawn_test_world, ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait};
-use crate::snf_utils;
-
-use snforge_std::{spy_events, EventSpyAssertionsTrait};
+use crate::{
+    ContractDefTrait, NamespaceDef, TestResource, WorldStorageTestTrait, snf_utils,
+    spawn_test_world,
+};
 
 #[test]
 #[available_gas(l2_gas: 20000000)]
@@ -58,7 +55,7 @@ fn test_delete() {
 }
 
 #[test]
-#[available_gas(l2_gas:6000000)]
+#[available_gas(l2_gas: 6000000)]
 fn test_contract_getter() {
     let world = deploy_world();
     let world = world.dispatcher;
@@ -75,7 +72,7 @@ fn test_contract_getter() {
 }
 
 #[test]
-#[available_gas(l2_gas:6000000)]
+#[available_gas(l2_gas: 6000000)]
 fn test_emit() {
     let bob: ContractAddress = 0xb0b.try_into().unwrap();
 
@@ -96,24 +93,22 @@ fn test_emit() {
     let simple_event = SimpleEvent { id: 2, data: (3, 4) };
     world.emit_event(@simple_event);
 
-    spy.assert_emitted(
-        @array![
-            (
-                world.dispatcher.contract_address,
-                world_contract::Event::EventEmitted(
-                    world_contract::EventEmitted {
-                        selector: Event::<SimpleEvent>::selector(world.namespace_hash),
-                        system_address: bob,
-                        keys: [
-                            2
-                            ].span(), values: [
-                            3, 4
-                        ].span()
-                    }
-                )
-            )
-        ]
-    );
+    spy
+        .assert_emitted(
+            @array![
+                (
+                    world.dispatcher.contract_address,
+                    world_contract::Event::EventEmitted(
+                        world_contract::EventEmitted {
+                            selector: Event::<SimpleEvent>::selector(world.namespace_hash),
+                            system_address: bob,
+                            keys: [2].span(),
+                            values: [3, 4].span(),
+                        },
+                    ),
+                ),
+            ],
+        );
 }
 
 #[test]
@@ -195,9 +190,7 @@ fn test_upgradeable_world_with_class_hash_zero() {
 
 #[test]
 #[available_gas(l2_gas: 60000000)]
-#[should_panic(
-    expected: "Caller `4919` cannot upgrade the resource `0` (not owner)",
-)]
+#[should_panic(expected: "Caller `4919` cannot upgrade the resource `0` (not owner)")]
 fn test_upgradeable_world_from_non_owner() {
     // Deploy world contract
     let world = deploy_world();
@@ -329,11 +322,7 @@ fn test_can_call_init_only_world_args() {
 pub fn dns_valid_class_hash() {
     let namespace_def = NamespaceDef {
         namespace: "dojo",
-        resources: [
-            TestResource::Model("Foo"),
-            TestResource::Contract("bar"),
-        ]
-            .span(),
+        resources: [TestResource::Model("Foo"), TestResource::Contract("bar")].span(),
     };
 
     let mut world = spawn_test_world([namespace_def].span());
