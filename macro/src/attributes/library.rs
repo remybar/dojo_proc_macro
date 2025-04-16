@@ -137,14 +137,14 @@ impl DojoLibrary {
                 pub impl #library_impl_name of ILibrary<ContractState> {}
 
                 #[abi(embed_v0)]
-                pub impl DeployedLibraryImpl of IDeployedResource<ContractState> {
+                pub impl DojoDeployedLibraryImpl of IDeployedResource<ContractState> {
                     fn dojo_name(self: @ContractState) -> ByteArray {
                         #dojo_name
                     }
                 }
 
                 #[generate_trait]
-                impl InternalImpl of InternalTrait {
+                impl DojoLibraryInternalImpl of DojoLibraryInternalTrait {
                     fn world(self: @ContractState, namespace: @ByteArray) -> dojo::world::storage::WorldStorage {
                         dojo::world::WorldStorageTrait::new(self.world_provider.world_dispatcher(), namespace)
                     }

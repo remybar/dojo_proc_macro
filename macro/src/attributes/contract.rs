@@ -140,14 +140,14 @@ impl DojoContract {
                 pub impl #contract_impl_name of IContract<ContractState> {}
 
                 #[abi(embed_v0)]
-                pub impl DeployedContractImpl of IDeployedResource<ContractState> {
+                pub impl DojoDeployedContractImpl of IDeployedResource<ContractState> {
                     fn dojo_name(self: @ContractState) -> ByteArray {
                         #dojo_name
                     }
                 }
 
                 #[generate_trait]
-                impl InternalImpl of InternalTrait {
+                impl DojoContractInternalImpl of DojoContractInternalTrait {
                     fn world(self: @ContractState, namespace: @ByteArray) -> dojo::world::storage::WorldStorage {
                         dojo::world::WorldStorageTrait::new(self.world_provider.world_dispatcher(), namespace)
                     }
