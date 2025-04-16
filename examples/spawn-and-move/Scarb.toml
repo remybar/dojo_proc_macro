@@ -1,0 +1,23 @@
+[package]
+name = "dojo_examples"
+version = "1.3.1"
+edition = "2024_07"
+
+[cairo]
+sierra-replace-ids = true
+
+[[target.starknet-contract]]
+build-external-contracts = [ "dojo::world::world_contract::world", "armory::m_Flatbow", "bestiary::m_RiverSkale" ]
+allowed-libfuncs-list.name = "experimental"
+
+[dependencies]
+openzeppelin = "0.20.0"
+starknet = "2.11.2"
+dojo = { path = "../../dojo" }
+dojo_macros = { path = "../../macro" }
+armory = { path = "../game-lib/armory" }
+bestiary = { path = "../game-lib/bestiary" }
+
+[features]
+default = [ "dungeon" ]
+dungeon = [  ]
