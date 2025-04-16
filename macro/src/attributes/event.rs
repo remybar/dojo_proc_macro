@@ -113,9 +113,7 @@ impl DojoEvent {
             ));
         }
 
-        if !derive_attr_names.contains(&DOJO_INTROSPECT_DERIVE.to_string()) {
-            missing_derive_attrs.push(DOJO_INTROSPECT_DERIVE.to_string());
-        }
+        missing_derive_attrs.push(DOJO_INTROSPECT_DERIVE.to_string());
 
         // Ensures events always derive required traits.
         EXPECTED_DERIVE_ATTR_NAMES.iter().for_each(|expected_attr| {
