@@ -1,9 +1,0 @@
-[package]
-name = "dojo_example"
-version = "0.1.0"
-edition = "2024_07"
-
-[dependencies]
-dojo_macros = { path = "../macro" }
-dojo = { path = "../dojo" }
-starknet = "2.11.2"

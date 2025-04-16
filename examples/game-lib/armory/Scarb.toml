@@ -1,0 +1,12 @@
+[package]
+name = "armory"
+version = "0.1.0"
+description = "An armory of epic weapons."
+edition.workspace = true
+
+[dependencies]
+starknet.workspace = true
+dojo.workspace = true
+dojo_macros.workspace = true
+
+[lib]

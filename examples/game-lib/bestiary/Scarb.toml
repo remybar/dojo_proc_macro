@@ -1,0 +1,12 @@
+[package]
+name = "bestiary"
+version = "0.1.0"
+description = "Some scary foes to fight."
+edition.workspace = true
+
+[dependencies]
+starknet.workspace = true
+dojo.workspace = true
+dojo_macros.workspace = true
+
+[lib]

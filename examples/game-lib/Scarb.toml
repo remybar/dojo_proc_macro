@@ -1,0 +1,16 @@
+[workspace]
+members = [
+    "armory",
+    "bestiary"
+]
+
+[workspace.package]
+version = "0.1.0"
+description = "Example game library for Dojo"
+edition = "2024_07"
+
+[workspace.dependencies]
+starknet = "2.11.2"
+dojo = { path = "../../dojo" }
+dojo_macros = { path = "../../macro" }
+

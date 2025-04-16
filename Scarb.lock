@@ -9,14 +9,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "dojo_example"
-version = "0.1.0"
-dependencies = [
- "dojo",
- "dojo_macros",
-]
-
-[[package]]
 name = "dojo_foundry_test"
 version = "0.1.0"
 dependencies = [

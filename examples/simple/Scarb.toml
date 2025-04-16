@@ -1,0 +1,10 @@
+[package]
+name = "dojo_simple"
+version = "0.1.0"
+description = "Simple example without workspace"
+edition = "2024_07"
+
+[dependencies]
+starknet = "2.11.2"
+dojo = { path = "../../dojo" }
+dojo_macros = { path = "../../macro" }

@@ -1,0 +1,12 @@
+[package]
+name = "dojo_simple_library"
+description = "Simple library without workspace"
+edition = "2024_07"
+version = "0.1.0"
+
+[dependencies]
+starknet = "=2.11.2"
+dojo = { path = "../../dojo" }
+dojo_macros = { path = "../../macro" }
+
+[lib]

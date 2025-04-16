@@ -1,9 +1,9 @@
 [package]
-cairo-version = "=2.11.2"
-edition = "2024_07"
-description = "The Dojo Core library for autonomous worlds."
 name = "dojo"
+description = "The Dojo Core library for autonomous worlds."
+edition = "2024_07"
 version = "1.3.1"
+cairo-version = "=2.11.2"
 
 [dependencies]
 starknet = "=2.11.2"
